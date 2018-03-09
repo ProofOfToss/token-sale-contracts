@@ -35,6 +35,7 @@ Some of the contracts are taken from OpenZeppelin project with following modific
 
 * Add operator deposit amount blocking/unblocking functions to TossToken smart-contract
 * Add Solidity unit tests
+* Perform third-party code audit
 
 ## How to deploy
 
