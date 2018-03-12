@@ -35,6 +35,9 @@ Some of the contracts are taken from OpenZeppelin project with following modific
 
 * Add operator deposit amount blocking/unblocking functions to TossToken smart-contract
 * Add Solidity unit tests
+* Set correct Proof of Toss team wallet addresses
+* Set correct soft/hard cap and minimum payment values
+* Mention non-ETH wallet addresses in TossCrowdsale::paymentsInOtherCurrency() function
 * Perform third-party code audit
 
 ## How to deploy
