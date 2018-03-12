@@ -17,15 +17,15 @@ contract PausableToken is StandardToken, Pausable {
         return super.transferFrom(_from, _to, _value);
     }
 
-    function approve(address _spender, uint256 _value) public returns (bool) {
-        return super.approve(_spender, _value);
-    }
-
-    function increaseApproval(address _spender, uint _addedValue) public returns (bool success) {
-        return super.increaseApproval(_spender, _addedValue);
-    }
-
-    function decreaseApproval(address _spender, uint _subtractedValue) public returns (bool success) {
-        return super.decreaseApproval(_spender, _subtractedValue);
-    }
+    //  function approve(address _spender, uint256 _value) public returns (bool) {
+    //    return super.approve(_spender, _value);
+    //  }
+    //
+    //  function increaseApproval(address _spender, uint _addedValue) public returns (bool success) {
+    //    return super.increaseApproval(_spender, _addedValue);
+    //  }
+    //
+    //  function decreaseApproval(address _spender, uint _subtractedValue) public returns (bool success) {
+    //    return super.decreaseApproval(_spender, _subtractedValue);
+    //  }
 }

@@ -8,6 +8,7 @@ import './TossSVTAllocation.sol';
 // (A1)
 // The main contract for the sale and management of rounds.
 // 0000000000000000000000000000000000000000000000000000000000000000
+
 contract TossCrowdsale{
 
     // ether = token:
@@ -41,11 +42,11 @@ contract TossCrowdsale{
 
     // beneficiary
     // Receives all the money (when finalizing Round1 & Round2)
-    0xD9C42577Bd8Ba42F380e3Cd294be066a122838ce,
+    0x0000000000000000000000000000000000000000,  // TODO !!!!
 
     // accountant
     // Receives all the tokens for non-ETH investors (when finalizing Round1 & Round2)
-    0xD9C42577Bd8Ba42F380e3Cd294be066a122838ce,
+    0x0000000000000000000000000000000000000000,  // TODO !!!!
 
     // manager
     // All rights except the rights to receive tokens or money. Has the right to change any other
@@ -57,20 +58,20 @@ contract TossCrowdsale{
 
     // observer
     // Has only the right to call paymentsInOtherCurrency (please read the document)
-    0xD9C42577Bd8Ba42F380e3Cd294be066a122838ce,
+    0x0000000000000000000000000000000000000000,  // TODO !!!!
 
     // bounty
-    0xD9C42577Bd8Ba42F380e3Cd294be066a122838ce,
+    0x0000000000000000000000000000000000000000,  // TODO !!!!
 
     // team
     // When the round is finalized, all team tokens are transferred to a special freezing
     // contract. As soon as defrosting is over, only the Team wallet will be able to
     // collect all the tokens. It does not store the address of the freezing contract,
     // but the final wallet of the project team.
-    0xD9C42577Bd8Ba42F380e3Cd294be066a122838ce,
+    0x0000000000000000000000000000000000000000, // TODO !!!!
 
     // company
-    0xD9C42577Bd8Ba42F380e3Cd294be066a122838ce
+    0x0000000000000000000000000000000000000000  // TODO !!!!
     ];
 
 
@@ -166,6 +167,7 @@ contract TossCrowdsale{
         token.addUnpausedWallet(wallets[uint8(Roles.manager)]);
         token.addUnpausedWallet(wallets[uint8(Roles.bounty)]);
         token.addUnpausedWallet(wallets[uint8(Roles.company)]);
+        token.addUnpausedWallet(wallets[uint8(Roles.observer)]);
 
         token.setFreezingManager(wallets[uint8(Roles.accountant)]);
 
@@ -547,7 +549,8 @@ contract TossCrowdsale{
         bool _manager = wallets[uint8(Roles.manager)] == _wallet;
         bool _bounty = wallets[uint8(Roles.bounty)] == _wallet;
         bool _company = wallets[uint8(Roles.company)] == _wallet;
-        return _accountant || _manager || _bounty || _company;
+        bool _observer = wallets[uint8(Roles.observer)] == _wallet;
+        return _accountant || _manager || _bounty || _company || _observer;
     }
 
     // For example - After 5 years of the project's existence, all of us suddenly decided collectively
@@ -667,10 +670,11 @@ contract TossCrowdsale{
     // This scenario ensures that for the sum of all fees in all currencies this value does not exceed hardcap.
 
     // BTC - TODO!!!
-    // BTC - TODO!!!
-    // BTC - TODO!!!
-    // BTC - TODO!!!
-    // BTC - TODO!!!
+    // LTC - TODO!!!
+    // DASH - TODO!!!
+    // *** - TODO!!!
+    // Впишите сюда как комментарий все не эфирные кошельки. Их можно будет проверить (желающим провести аудит,
+    // когда токенсейл уже запущен).
 
     // ** QUINTILLIONS ** 10^18 / 1**18 / 1e18
     function paymentsInOtherCurrency(uint256 _token, uint256 _value) public {

@@ -22,7 +22,7 @@ contract FreezingToken is PausableToken {
     function defrostDate(address _beneficiary) public view returns (uint256 Date) {
         freeze storage _freeze = freezedTokens[_beneficiary];
         if(_freeze.when < now) return 0;
-        return _freeze.amount;
+        return _freeze.when;
     }
 
     function freezeTokens(address _beneficiary, uint256 _amount, uint256 _when) onlyOwner public {
