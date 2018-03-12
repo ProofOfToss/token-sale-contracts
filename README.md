@@ -1,5 +1,7 @@
 # Solidity smart-contracts for Proof of Toss token sale
 
+Status: WIP & testing
+
 ## Requirements
 
 * Solidity >= 4.0.18
