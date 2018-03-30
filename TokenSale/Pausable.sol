@@ -1,6 +1,7 @@
 pragma solidity ^0.4.21;
 
 import './Ownable.sol';
+import './Crowdsale/Crowdsale.sol';
 
 /**
  * @title Pausable
