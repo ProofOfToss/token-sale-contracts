@@ -1,54 +1,61 @@
 pragma solidity ^0.4.21;
 
 import '../SafeMath.sol';
-import '../Token/TossToken.sol';
+import '../Token/Token.sol';
 import './RefundVault.sol';
-import './TossSVTAllocation.sol';
+import './AllocationToss.sol';
+import './Creator.sol';
 
 // (A1)
 // The main contract for the sale and management of rounds.
 // 0000000000000000000000000000000000000000000000000000000000000000
-
-contract TossCrowdsale{
-
-    // ether = token:
-    uint256 constant TEAM_PAY    =  70000000 ether; //  70M =  7% = Team, freeze for 2 year
-    uint256 constant BOUNTY_PAY  =  10000000 ether; //  10M =  1% = Bounty
-    uint256 constant COMPANY_PAY = 220000000 ether; // 220M = 22% = (1% White List) + (21% company reserve)
-    uint256 public TOTAL_TOKENS  = 700000000 ether; // 700M = 70% = Total for TokenSale
+contract Crowdsale{
 
     uint256 constant USER_UNPAUSE_TOKEN_TIMEOUT =  60 days;
     uint256 constant FORCED_REFUND_TIMEOUT1     = 400 days;
     uint256 constant FORCED_REFUND_TIMEOUT2     = 600 days;
+    uint256 constant ROUND_PROLONGATE           =   0 days;
+    uint256 constant BURN_TOKENS_TIME           =  90 days;
 
     using SafeMath for uint256;
 
     enum TokenSaleType {round1, round2}
-    enum Roles {beneficiary, accountant, manager, observer, bounty, team, company}
+    TokenSaleType public TokenSale = TokenSaleType.round2;
 
-    TossToken public token;
+    //              0             1         2        3        4        5      6       7        8     9
+    enum Roles {beneficiary, accountant, manager, observer, bounty, company, team, founders, fund, fees}
+
+    Creator public creator;
+    bool creator2;
+    bool isBegin=false;
+    Token public token;
+    RefundVault public vault;
+    AllocationTOSS public allocation;
+    //FeesStrategy public feesStrategy;
 
     bool public isFinalized;
     bool public isInitialized;
     bool public isPausedCrowdsale;
+    bool public chargeBonuses;
+    bool public canFirstMint=true;
 
-    // Initially, all next 7 roles/wallets are given to the Manager. The Manager is an employee of the company
+    // Initially, all next 7+ roles/wallets are given to the Manager. The Manager is an employee of the company
     // with knowledge of IT, who publishes the contract and sets it up. However, money and tokens require
     // a Beneficiary and other roles (Accountant, Team, etc.). The Manager will not have the right
     // to receive them. To enable this, the Manager must either enter specific wallets here, or perform
     // this via method changeWallet. In the finalization methods it is written which wallet and
     // what percentage of tokens are received.
-    address[7] public wallets = [
+    address[10] public wallets = [
 
-    // beneficiary
+    // Beneficiary
     // Receives all the money (when finalizing Round1 & Round2)
-    0x0000000000000000000000000000000000000000,  // TODO !!!!
+    msg.sender,
 
-    // accountant
+    // Accountant
     // Receives all the tokens for non-ETH investors (when finalizing Round1 & Round2)
-    0x0000000000000000000000000000000000000000,  // TODO !!!!
+    msg.sender,
 
-    // manager
+    // Manager
     // All rights except the rights to receive tokens or money. Has the right to change any other
     // wallets (Beneficiary, Accountant, ...), but only if the round has not started. Once the
     // round is initialized, the Manager has lost all rights to change the wallets.
@@ -56,70 +63,70 @@ contract TossCrowdsale{
     // point to a single wallet.
     msg.sender,
 
-    // observer
+    // Observer
     // Has only the right to call paymentsInOtherCurrency (please read the document)
-    0x0000000000000000000000000000000000000000,  // TODO !!!!
+    msg.sender,
 
-    // bounty
-    0x0000000000000000000000000000000000000000,  // TODO !!!!
+    // Bounty - 2% tokens
+    msg.sender,
 
-    // team
-    // When the round is finalized, all team tokens are transferred to a special freezing
-    // contract. As soon as defrosting is over, only the Team wallet will be able to
-    // collect all the tokens. It does not store the address of the freezing contract,
-    // but the final wallet of the project team.
-    0x0000000000000000000000000000000000000000, // TODO !!!!
+    // Company, White list 1%
+    msg.sender,
 
-    // company
-    0x0000000000000000000000000000000000000000  // TODO !!!!
+    // Team, 6%, freeze 1+1 year
+    msg.sender,
+
+    // Founders, 10% freeze 1+1 year
+    msg.sender,
+
+    // Fund, 11%
+    msg.sender
+
     ];
 
 
-    struct Profit{
-    uint256 min;    // percent from 0 to 50
-    uint256 max;    // percent from 0 to 50
-    uint256 step;   // percent step, from 1 to 50 (please, read doc!)
-    uint256 maxAllProfit;
-    }
+
     struct Bonus {
     uint256 value;
     uint256 procent;
     uint256 freezeTime;
     }
+
+    struct Profit {
+    uint256 percent;
+    uint256 duration;
+    }
+
     struct Freezed {
     uint256 value;
     uint256 dateTo;
     }
 
-    uint256 public overall;
-
-    mapping(address => uint256) public shares;
-    mapping(address => Freezed) public freezedShares;
-
-    bool public startMint;
-
     Bonus[] public bonuses;
+    Profit[] public profits;
 
 
-
-    //TODO!!!
-    uint256 public startTime= (now/600 + ((now - now/600 * 600 < 300) ? 2 : 3))*600;
-    uint256 public endDiscountTime = startTime + 1800;
-    uint256 public endTime = endDiscountTime;
+    uint256 public startTime= 1523491200;
+    uint256 public endTime  = 1526083199;
+    uint256 public renewal;
 
     // How many tokens (excluding the bonus) are transferred to the investor in exchange for 1 ETH
-    // **THOUSANDS** 10^3 for human, *10**3 for Solidity, 1e3 for MyEtherWallet (MEW).
-    // Example: if 1ETH = 40.5 Token ==> use 40500
-    uint256 public rate = 1000;
+    // **THOUSANDS** 10^18 for human, *10**18 for Solidity, 1e18 for MyEtherWallet (MEW).
+    // Example: if 1ETH = 40.5 Token ==> use 40500 finney
+    uint256 public rate = 10000 ether;
+
+    // ETH/USD rate in US$
+    // **QUINTILLIONS** 10^18 / *10**18 / 1e18. Example: ETH/USD=$1000 ==> use 1000*10**18 (Solidity) or 1000 ether or 1000e18 (MEW)
+    uint256 public exchange  = 700 ether;
 
     // If the round does not attain this value before the closing date, the round is recognized as a
     // failure and investors take the money back (the founders will not interfere in any way).
     // **QUINTILLIONS** 10^18 / *10**18 / 1e18. Example: softcap=15ETH ==> use 15*10**18 (Solidity) or 15e18 (MEW)
-    uint256 public softCap = 5000 ether;
+    uint256 public softCap = 2857 ether;
 
     // The maximum possible amount of income
     // **QUINTILLIONS** 10^18 / *10**18 / 1e18. Example: hardcap=123.45ETH ==> use 123450*10**15 (Solidity) or 12345e15 (MEW)
-    uint256 public hardCap = 41666 ether;
+    uint256 public hardCap = 46429 ether;
 
     // If the last payment is slightly higher than the hardcap, then the usual contracts do
     // not accept it, because it goes beyond the hardcap. However it is more reasonable to accept the
@@ -128,72 +135,115 @@ contract TossCrowdsale{
     // round closes. The funders should write here a small number, not more than 1% of the CAP.
     // Can be equal to zero, to cancel.
     // **QUINTILLIONS** 10^18 / *10**18 / 1e18
-    uint256 public overLimit = 10 ether;
+    uint256 public overLimit = 20 ether;
 
     // The minimum possible payment from an investor in ETH. Payments below this value will be rejected.
     // **QUINTILLIONS** 10^18 / *10**18 / 1e18. Example: minPay=0.1ETH ==> use 100*10**15 (Solidity) or 100e15 (MEW)
-    uint256 public minPay = 70 finney;
+    uint256 public minPay = 71 finney;
 
-    uint256 ethWeiRaised;
-    uint256 nonEthWeiRaised;
-    uint256 weiRound1;
+    uint256 public maxAllProfit = 30;
+
+    uint256 public ethWeiRaised;
+    uint256 public nonEthWeiRaised;
+    uint256 public weiRound1;
     uint256 public tokenReserved;
 
-    RefundVault public vault;
-    TossSVTAllocation public lockedAllocation;
-
-    TokenSaleType TokenSale = TokenSaleType.round1;
-
-    bool public bounty;
-    bool public team;
-    bool public company;
-    //bool public partners;
+    uint256 public totalSaledToken;
 
     event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
     event Finalized();
     event Initialized();
 
-    function TossCrowdsale(TossToken _token) public
+    function Crowdsale(Creator _creator) public
     {
+        creator2=true;
+        creator=_creator;
+    }
 
+    function onlyAdmin(bool forObserver) internal view {
+        require(wallets[uint8(Roles.manager)] == msg.sender || wallets[uint8(Roles.beneficiary)] == msg.sender ||
+        forObserver==true && wallets[uint8(Roles.observer)] == msg.sender);
+    }
 
-        token = _token;
-        token.setOwner();
+    // Setting of basic parameters, analog of class constructor
+    // @ Do I have to use the function      see your scenario
+    // @ When it is possible to call        before Round 1/2
+    // @ When it is launched automatically  -
+    // @ Who can call the function          admins
+    function begin() internal
+    {
+        if (isBegin) return;
+        isBegin=true;
 
-        token.pause(); // block exchange tokens
+        token = creator.createToken();
+        if (creator2) {
+            vault = creator.createRefund();
+        }
 
-        token.addUnpausedWallet(wallets[uint8(Roles.accountant)]);
-        token.addUnpausedWallet(wallets[uint8(Roles.manager)]);
-        token.addUnpausedWallet(wallets[uint8(Roles.bounty)]);
-        token.addUnpausedWallet(wallets[uint8(Roles.company)]);
-        token.addUnpausedWallet(wallets[uint8(Roles.observer)]);
+        //        if (wallets[uint8(Roles.fees)] != 0x0) {
+        //            feesStrategy = creator.createFeesStrategy();
+        //        }
 
-        token.setFreezingManager(wallets[uint8(Roles.accountant)]);
+        token.setUnpausedWallet(wallets[uint8(Roles.accountant)], true);
+        token.setUnpausedWallet(wallets[uint8(Roles.manager)], true);
+        token.setUnpausedWallet(wallets[uint8(Roles.bounty)], true);
+        token.setUnpausedWallet(wallets[uint8(Roles.company)], true);
+        token.setUnpausedWallet(wallets[uint8(Roles.observer)], true);
 
-        // For payments > ~$100 000 (1000 ETH):
-        //    1) lock (freeze) tokens for 5 months
-        // 	  2) add +30% bonus tokens
-        bonuses.push(Bonus(1000000 finney, 30, 30*5 days));
+        //bonuses.push(Bonus(0 finney, 0, 0));
+        bonuses.push(Bonus(71429 finney, 30, 30*5 days));
+
+        profits.push(Profit(15,1 days));
+        profits.push(Profit(10,2 days));
+        profits.push(Profit(5,4 days));
 
     }
 
 
+
+    // Issue of tokens for the zero round, it is usually called: private pre-sale (Round 0)
+    // @ Do I have to use the function      may be
+    // @ When it is possible to call        before Round 1/2
+    // @ When it is launched automatically  -
+    // @ Who can call the function          admins
+    function firstMintRound0(uint256 _amount) public {
+        onlyAdmin(false);
+        require(canFirstMint);
+        begin();
+        token.mint(wallets[uint8(Roles.accountant)],_amount);
+    }
+
+    // info
+    function totalSupply() external view returns (uint256){
+        return token.totalSupply();
+    }
+
     // Returns the name of the current round in plain text. Constant.
-    function getTokenSaleType()  public constant returns(string){
+    function getTokenSaleType() external view returns(string){
         return (TokenSale == TokenSaleType.round1)?'round1':'round2';
     }
 
     // Transfers the funds of the investor to the contract of return of funds. Internal.
     function forwardFunds() internal {
-        vault.deposit.value(msg.value)(msg.sender);
+        if(address(vault) != 0x0){
+            vault.deposit.value(msg.value)(msg.sender);
+        }else {
+            //            if(address(feesStrategy) != 0x0 ){
+            //                wallets[uint8(Roles.fees)].transfer(feesStrategy.pay(msg.value));
+            //            }
+            if(address(this).balance > 0){
+                wallets[uint8(Roles.beneficiary)].transfer(address(this).balance);
+            }
+        }
+
     }
 
     // Check for the possibility of buying tokens. Inside. Constant.
-    function validPurchase() internal constant returns (bool) {
+    function validPurchase() internal view returns (bool) {
 
         // The round started and did not end
-        bool withinPeriod = (now > startTime && now < endTime);
+        bool withinPeriod = (now > startTime && now < endTime.add(renewal));
 
         // Rate is greater than or equal to the minimum
         bool nonZeroPurchase = msg.value >= minPay;
@@ -206,50 +256,58 @@ contract TossCrowdsale{
     }
 
     // Check for the ability to finalize the round. Constant.
-    function hasEnded() public constant returns (bool) {
+    function hasEnded() public view returns (bool) {
 
-        bool timeReached = now > endTime;
+        bool timeReached = now > endTime.add(renewal);
 
         bool capReached = weiRaised() >= hardCap;
 
         return (timeReached || capReached) && isInitialized;
     }
 
-    function finalizeAll() external {
-        finalize();
-        finalize1();
-        finalize2();
-        finalize3();
-    }
-
     // Finalize. Only available to the Manager and the Beneficiary. If the round failed, then
     // anyone can call the finalization to unlock the return of funds to investors
     // You must call a function to finalize each round (after the Round1 & after the Round2)
+    // @ Do I have to use the function      yes
+    // @ When it is possible to call        after end of Round1 & Round2
+    // @ When it is launched automatically  no
+    // @ Who can call the function          admins or anybody (if round is failed)
     function finalize() public {
 
         require(wallets[uint8(Roles.manager)] == msg.sender || wallets[uint8(Roles.beneficiary)] == msg.sender || !goalReached());
         require(!isFinalized);
-        require(hasEnded());
+        require(hasEnded() || ((wallets[uint8(Roles.manager)] == msg.sender || wallets[uint8(Roles.beneficiary)] == msg.sender) && goalReached()));
 
         isFinalized = true;
         finalization();
-        Finalized();
+        emit Finalized();
     }
 
     // The logic of finalization. Internal
+    // @ Do I have to use the function      no
+    // @ When it is possible to call        -
+    // @ When it is launched automatically  after end of round
+    // @ Who can call the function          -
     function finalization() internal {
 
+        //uint256 feesValue;
         // If the goal of the achievement
         if (goalReached()) {
 
-            // Send ether to Beneficiary
-            vault.close(wallets[uint8(Roles.beneficiary)]);
+            if(address(vault) != 0x0){
+                // Send ether to Beneficiary
+                //if(address(feesStrategy) == 0x0){
+                vault.close(wallets[uint8(Roles.beneficiary)],0x0,0);
+                //} else {
+                //    feesValue = feesStrategy.pay(ethWeiRaised);
+                //    vault.close(wallets[uint8(Roles.beneficiary)],wallets[uint8(Roles.fees)],feesValue);
+                //}
+            }
 
             // if there is anything to give
             if (tokenReserved > 0) {
 
-                //token.mint(wallets[uint8(Roles.accountant)],tokenReserved);
-                setShare(wallets[uint8(Roles.accountant)],tokenReserved,0);
+                token.mint(wallets[uint8(Roles.accountant)],tokenReserved);
 
                 // Reset the counter
                 tokenReserved = 0;
@@ -271,72 +329,76 @@ contract TossCrowdsale{
                 nonEthWeiRaised = 0;
 
 
+
             }
             else // If the second round is finalized
             {
 
                 // Permission to collect tokens to those who can pick them up
-                bounty = true;
-                team = true;
-                company = true;
+                chargeBonuses = true;
 
-                startMint = true;
-
-                getCashFrom(wallets[uint8(Roles.accountant)]);
+                totalSaledToken = token.totalSupply();
                 //partners = true;
 
             }
 
         }
-        else // If they failed round
+        else if (address(vault) != 0x0) // If they failed round
         {
             // Allow investors to withdraw their funds
+
             vault.enableRefunds();
         }
     }
 
     // The Manager freezes the tokens for the Team.
     // You must call a function to finalize Round 2 (only after the Round2)
-    function finalize1() public {
-        require(wallets[uint8(Roles.manager)] == msg.sender || wallets[uint8(Roles.beneficiary)] == msg.sender);
-        require(team);
-        team = false;
-        lockedAllocation = new TossSVTAllocation(token, wallets[uint8(Roles.team)]);
-        token.addUnpausedWallet(lockedAllocation);
-        // 7% - tokens to Team wallet after freeze
-        token.mint(lockedAllocation, TEAM_PAY);
-    }
-
+    // @ Do I have to use the function      yes
+    // @ When it is possible to call        Round2
+    // @ When it is launched automatically  -
+    // @ Who can call the function          admins
     function finalize2() public {
-        require(wallets[uint8(Roles.manager)] == msg.sender || wallets[uint8(Roles.beneficiary)] == msg.sender);
-        require(bounty);
-        bounty = false;
-        // 1% - tokens to bounty wallet
-        token.mint(wallets[uint8(Roles.bounty)], BOUNTY_PAY);
+
+        onlyAdmin(false);
+        require(chargeBonuses);
+        chargeBonuses = false;
+
+        allocation = creator.createAllocation(token, now + 1 years /* stage N1 */, now + 2 years /* stage N2 */);
+        token.setUnpausedWallet(allocation, true);
+
+        // Team = 6%, Founders = 10%, Fund = 11%    TOTAL = 27%
+        allocation.addShare(wallets[uint8(Roles.team)],       6,  50); // only 50% - first year, stage N1  (and +50 for stage N2)
+        allocation.addShare(wallets[uint8(Roles.founders)],  10,  50); // only 50% - first year, stage N1  (and +50 for stage N2)
+        allocation.addShare(wallets[uint8(Roles.fund)],      11, 100); // 100% - first year
+
+        // 27% - tokens to freeze contract (Team+Founders+Fund)
+        token.mint(allocation, totalSaledToken.mul(27).div(70));
+
+        // 2% - tokens to Bounty wallet
+        token.mint(wallets[uint8(Roles.bounty)], totalSaledToken.mul(2).div(70));
+
+        // 1% - tokens to Company (White List) wallet
+        token.mint(wallets[uint8(Roles.company)], totalSaledToken.mul(1).div(70));
+
     }
 
-    // For marketing, referral, reserve, white list
-    // You must call a function to finalize Round 2 (only after the Round2)
-    function finalize3() public {
-        require(wallets[uint8(Roles.manager)] == msg.sender || wallets[uint8(Roles.beneficiary)] == msg.sender);
-        require(company);
-        company = false;
-        // 1% - tokens to company wallet
-        token.mint(wallets[uint8(Roles.company)], COMPANY_PAY);
-    }
 
 
     // Initializing the round. Available to the manager. After calling the function,
     // the Manager loses all rights: Manager can not change the settings (setup), change
     // wallets, prevent the beginning of the round, etc. You must call a function after setup
     // for the initial round (before the Round1 and before the Round2)
+    // @ Do I have to use the function      yes
+    // @ When it is possible to call        before each round
+    // @ When it is launched automatically  -
+    // @ Who can call the function          admins
     function initialize() public {
 
-        // Only the Manager
-        require(wallets[uint8(Roles.manager)] == msg.sender);
-
+        onlyAdmin(false);
         // If not yet initialized
         require(!isInitialized);
+        begin();
+
 
         // And the specified start time has not yet come
         // If initialization return an error, check the start date!
@@ -344,118 +406,82 @@ contract TossCrowdsale{
 
         initialization();
 
-        Initialized();
+        emit Initialized();
 
         isInitialized = true;
+        renewal = 0;
+        canFirstMint = false;
     }
 
     function initialization() internal {
-        if (address(vault) != 0x0){
-            vault.del(wallets[uint8(Roles.beneficiary)]);
+        if (address(vault) != 0x0 && vault.state() != RefundVault.State.Active){
+            vault.restart();
         }
-        vault = new RefundVault();
     }
 
     // At the request of the investor, we raise the funds (if the round has failed because of the hardcap)
-    function claimRefund() public{
+    // @ Do I have to use the function      no
+    // @ When it is possible to call        if round is failed (softcap not reached)
+    // @ When it is launched automatically  -
+    // @ Who can call the function          all investors
+    function claimRefund() external {
+        require(address(vault) != 0x0);
         vault.refund(msg.sender);
     }
 
-    function getCashFrom(address _beneficiary) public {
-        require(startMint);
-        if(shares[_beneficiary] == 0) return;
-
-        uint256 _amount = TOTAL_TOKENS.mul(shares[_beneficiary]).div(overall);
-
-
-        if(freezedShares[_beneficiary].value > 0){
-            token.freezeTokens(_beneficiary,TOTAL_TOKENS.mul(freezedShares[_beneficiary].value).div(overall),freezedShares[_beneficiary].dateTo);
-            freezedShares[_beneficiary].value = 0;
-        }
-
-        overall = overall.sub(shares[_beneficiary]);
-        TOTAL_TOKENS = TOTAL_TOKENS.sub(_amount);
-        shares[_beneficiary] = 0;
-
-        token.mint(_beneficiary,_amount);
-    }
-
-    function getCash() public {
-        getCashFrom(msg.sender);
-    }
-
     // We check whether we collected the necessary minimum funds. Constant.
-    function goalReached() public constant returns (bool) {
+    function goalReached() public view returns (bool) {
         return weiRaised() >= softCap;
     }
 
+
     // Customize. The arguments are described in the constructor above.
-    function setup(uint256 _startTime, uint256 _endDiscountTime, uint256 _endTime, uint256 _softCap, uint256 _hardCap, uint256 _rate, uint256 _overLimit, uint256 _minPay, uint256[] _value, uint256[] _procent,uint256[] _freezeTime) public{
-        changePeriod(_startTime, _endDiscountTime, _endTime);
-        changeTargets(_softCap, _hardCap);
-        changeRate(_rate, _overLimit, _minPay);
-        setBonuses(_value, _procent,_freezeTime);
-    }
+    // @ Do I have to use the function      yes
+    // @ When it is possible to call        before each rond
+    // @ When it is launched automatically  -
+    // @ Who can call the function          admins
+    function setup(uint256 _startTime, uint256 _endTime, uint256 _softCap, uint256 _hardCap,
+    uint256 _rate, uint256 _exchange,
+    uint256 _maxAllProfit, uint256 _overLimit, uint256 _minPay,
+    uint256[] _durationTB , uint256[] _percentTB, uint256[] _valueVB, uint256[] _percentVB, uint256[] _freezeTimeVB) public
+    {
 
-    // Change the date and time: the beginning of the round, the end of the bonus, the end of the round. Available to Manager
-    // Description in the Crowdsale constructor
-    function changePeriod(uint256 _startTime, uint256 _endDiscountTime, uint256 _endTime) public{
-
-        require(wallets[uint8(Roles.manager)] == msg.sender);
-
+        onlyAdmin(false);
         require(!isInitialized);
+
+        begin();
 
         // Date and time are correct
         require(now <= _startTime);
-        require(_endDiscountTime > _startTime && _endDiscountTime <= _endTime);
-
+        require(_startTime < _endTime);
         startTime = _startTime;
         endTime = _endTime;
-        endDiscountTime = _endDiscountTime;
-
-    }
-
-    // We change the purpose of raising funds. Available to the manager.
-    // Description in the Crowdsale constructor.
-    function changeTargets(uint256 _softCap, uint256 _hardCap) public {
-
-        require(wallets[uint8(Roles.manager)] == msg.sender);
-
-        require(!isInitialized);
 
         // The parameters are correct
         require(_softCap <= _hardCap);
-
         softCap = _softCap;
         hardCap = _hardCap;
-    }
-
-    // Change the price (the number of tokens per 1 eth), the maximum hardCap for the last bet,
-    // the minimum bet. Available to the Manager.
-    // Description in the Crowdsale constructor
-    function changeRate(uint256 _rate, uint256 _overLimit, uint256 _minPay) public {
-
-        require(wallets[uint8(Roles.manager)] == msg.sender);
-
-        require(!isInitialized);
 
         require(_rate > 0);
-
         rate = _rate;
+
         overLimit = _overLimit;
         minPay = _minPay;
-    }
+        exchange = _exchange;
+        maxAllProfit = _maxAllProfit;
 
-    function setBonuses(uint256[] _value, uint256[] _procent, uint256[] _freezeTime) public {
-
-        require(wallets[uint8(Roles.manager)] == msg.sender);
-        require(!isInitialized);
-
-        require(_value.length == _procent.length && _value.length == _freezeTime.length);
-        bonuses.length = _value.length;
-        for(uint256 i = 0; i < _value.length; i++){
-            bonuses[i] = Bonus(_value[i],_procent[i],_freezeTime[i]);
+        require(_valueVB.length == _percentVB.length && _valueVB.length == _freezeTimeVB.length);
+        bonuses.length = _valueVB.length;
+        for(uint256 i = 0; i < _valueVB.length; i++){
+            bonuses[i] = Bonus(_valueVB[i],_percentVB[i],_freezeTimeVB[i]);
         }
+
+        require(_percentTB.length == _durationTB.length);
+        profits.length = _percentTB.length;
+        for( i = 0; i < _percentTB.length; i++){
+            profits[i] = Profit(_percentTB[i],_durationTB[i]);
+        }
+
     }
 
     // Collected funds for the current round. Constant.
@@ -464,7 +490,7 @@ contract TossCrowdsale{
     }
 
     // Returns the amount of fees for both phases. Constant.
-    function weiTotalRaised() public constant returns(uint256){
+    function weiTotalRaised() external constant returns(uint256){
         return weiRound1.add(weiRaised());
     }
 
@@ -474,16 +500,20 @@ contract TossCrowdsale{
     }
 
     // Returns the percentage of the bonus on the given date. Constant.
-    function getProfitPercentForData(uint256 timeNow) public constant returns (uint256){
-        if       (timeNow < startTime + 1 days) {  return 15; }
-        else if  (timeNow < startTime + 4 days) {  return 10; }
-        else if  (timeNow < startTime + 7 days) {  return 5;  }
-        else                                    {  return 0;  }
+    function getProfitPercentForData(uint256 _timeNow) public constant returns (uint256){
+        uint256 allDuration;
+        for(uint8 i = 0; i < profits.length; i++){
+            allDuration = allDuration.add(profits[i].duration);
+            if(_timeNow < startTime.add(allDuration)){
+                return profits[i].percent;
+            }
+        }
+        return 0;
     }
 
-    function getBonuses(uint256 _value) public constant returns (Bonus){
+    function getBonuses(uint256 _value) public constant returns (uint256,uint256,uint256){
         if(bonuses.length == 0 || bonuses[0].value > _value){
-            return Bonus(0,0,0);
+            return (0,0,0);
         }
         uint16 i = 1;
         for(i; i < bonuses.length; i++){
@@ -491,7 +521,7 @@ contract TossCrowdsale{
                 break;
             }
         }
-        return bonuses[i-1];
+        return (bonuses[i-1].value,bonuses[i-1].procent,bonuses[i-1].freezeTime);
     }
 
     // The ability to quickly check Round1 (only for Round1, only 1 time). Completes the Round1 by
@@ -500,57 +530,55 @@ contract TossCrowdsale{
     // does not call and the funds are raised normally. We recommend that you delete this
     // function entirely, so as not to confuse the auditors. Initialize & Finalize not needed.
     // ** QUINTILIONS **  10^18 / 1**18 / 1e18
-    function fastTokenSale(uint256 _totalSupply) public {
-        require(wallets[uint8(Roles.manager)] == msg.sender);
-        require(TokenSale == TokenSaleType.round1 && !isInitialized);
-        setShare(wallets[uint8(Roles.accountant)], _totalSupply, 0);
-        TokenSale = TokenSaleType.round2;
-    }
+    // @ Do I have to use the function      no, see your scenario
+    // @ When it is possible to call        after Round0 and before Round2
+    // @ When it is launched automatically  -
+    // @ Who can call the function          admins
+    //    function fastTokenSale(uint256 _totalSupply) external {
+    //      onlyAdmin(false);
+    //        require(TokenSale == TokenSaleType.round1 && !isInitialized);
+    //        token.mint(wallets[uint8(Roles.accountant)], _totalSupply);
+    //        TokenSale = TokenSaleType.round2;
+    //    }
+
 
     // Remove the "Pause of exchange". Available to the manager at any time. If the
     // manager refuses to remove the pause, then 30-120 days after the successful
     // completion of the TokenSale, anyone can remove a pause and allow the exchange to continue.
     // The manager does not interfere and will not be able to delay the term.
     // He can only cancel the pause before the appointed time.
-    function tokenUnpause() public {
-        require(wallets[uint8(Roles.manager)] == msg.sender || (now > endTime + USER_UNPAUSE_TOKEN_TIMEOUT && startMint));
-        token.unpause();
+    // @ Do I have to use the function      YES YES YES
+    // @ When it is possible to call        after end of ICO
+    // @ When it is launched automatically  -
+    // @ Who can call the function          admins or anybody
+    function tokenUnpause() external {
+
+        require(wallets[uint8(Roles.manager)] == msg.sender
+        || (now > endTime.add(renewal).add(USER_UNPAUSE_TOKEN_TIMEOUT) && TokenSale == TokenSaleType.round2 && isFinalized && goalReached()));
+        token.setPause(true);
     }
 
     // Enable the "Pause of exchange". Available to the manager until the TokenSale is completed.
     // The manager cannot turn on the pause, for example, 3 years after the end of the TokenSale.
+    // ***CHECK***SCENARIO***
+    // @ Do I have to use the function      no
+    // @ When it is possible to call        while Round2 not ended
+    // @ When it is launched automatically  before any rounds
+    // @ Who can call the function          admins
     function tokenPause() public {
-        require(wallets[uint8(Roles.manager)] == msg.sender && !isFinalized);
-        token.pause();
+        onlyAdmin(false);
+        require(!isFinalized);
+        token.setPause(false);
     }
 
     // Pause of sale. Available to the manager.
-    function crowdsalePause() public {
-        require(wallets[uint8(Roles.manager)] == msg.sender);
-        require(isPausedCrowdsale == false);
-        isPausedCrowdsale = true;
-    }
-
-    // Withdrawal from the pause of sale. Available to the manager.
-    function crowdsaleUnpause() public {
-        require(wallets[uint8(Roles.manager)] == msg.sender);
-        require(isPausedCrowdsale == true);
-        isPausedCrowdsale = false;
-    }
-
-    // Checking whether the rights to address ignore the "Pause of exchange". If the
-    // wallet is included in this list, it can translate tokens, ignoring the pause. By default,
-    // only the following wallets are included:
-    //    - Accountant wallet (he should immediately transfer tokens, but not to non-ETH investors)
-    //    - Contract for freezing the tokens for the Team (but Team wallet not included)
-    // Inside. Constant.
-    function unpausedWallet(address _wallet) internal constant returns(bool) {
-        bool _accountant = wallets[uint8(Roles.accountant)] == _wallet;
-        bool _manager = wallets[uint8(Roles.manager)] == _wallet;
-        bool _bounty = wallets[uint8(Roles.bounty)] == _wallet;
-        bool _company = wallets[uint8(Roles.company)] == _wallet;
-        bool _observer = wallets[uint8(Roles.observer)] == _wallet;
-        return _accountant || _manager || _bounty || _company || _observer;
+    // @ Do I have to use the function      no
+    // @ When it is possible to call        during active rounds
+    // @ When it is launched automatically  -
+    // @ Who can call the function          admins
+    function setCrowdsalePause(bool mode) public {
+        onlyAdmin(false);
+        isPausedCrowdsale = mode;
     }
 
     // For example - After 5 years of the project's existence, all of us suddenly decided collectively
@@ -561,13 +589,21 @@ contract TossCrowdsale{
     //      - generate new tokens for a new contract
     // It is understood that after a general solution through this function all investors
     // will collectively (and voluntarily) move to a new token.
+    // @ Do I have to use the function      no
+    // @ When it is possible to call        only after ICO!
+    // @ When it is launched automatically  -
+    // @ Who can call the function          admins
     function moveTokens(address _migrationAgent) public {
-        require(wallets[uint8(Roles.manager)] == msg.sender);
+        onlyAdmin(false);
         token.setMigrationAgent(_migrationAgent);
     }
 
+    // @ Do I have to use the function      no
+    // @ When it is possible to call        only after ICO!
+    // @ When it is launched automatically  -
+    // @ Who can call the function          admins
     function migrateAll(address[] _holders) public {
-        require(wallets[uint8(Roles.manager)] == msg.sender);
+        onlyAdmin(false);
         token.migrateAll(_holders);
     }
 
@@ -575,23 +611,70 @@ contract TossCrowdsale{
     // Available to any wallet owner except the observer.
     // Available to the manager until the round is initialized.
     // The Observer's wallet or his own manager can change at any time.
-    function changeWallet(Roles _role, address _wallet) public
+    // @ Do I have to use the function      no
+    // @ When it is possible to call        depend...
+    // @ When it is launched automatically  -
+    // @ Who can call the function          staff (all 7+ roles)
+    function changeWallet(Roles _role, address _wallet) external
     {
         require(
         (msg.sender == wallets[uint8(_role)] && _role != Roles.observer)
         ||
-        (msg.sender == wallets[uint8(Roles.manager)] && (!isInitialized || _role == Roles.observer))
+        (msg.sender == wallets[uint8(Roles.manager)] && (!isInitialized || _role == Roles.observer) && _role != Roles.fees )
         );
-        address oldWallet = wallets[uint8(_role)];
+
         wallets[uint8(_role)] = _wallet;
-        if(!unpausedWallet(oldWallet))
-        token.delUnpausedWallet(oldWallet);
-        if(unpausedWallet(_wallet))
-        token.addUnpausedWallet(_wallet);
-        if(_role == Roles.accountant)
-        token.setFreezingManager(wallets[uint8(Roles.accountant)]);
     }
 
+
+    // The beneficiary at any time can take rights in all roles and prescribe his wallet in all the
+    // rollers. Thus, he will become the recipient of tokens for the role of Accountant,
+    // Team, etc. Works at any time.
+    // @ Do I have to use the function      no
+    // @ When it is possible to call        any time
+    // @ When it is launched automatically  -
+    // @ Who can call the function          only Beneficiary
+    function resetAllWallets() external{
+        address _beneficiary = wallets[uint8(Roles.beneficiary)];
+        require(msg.sender == _beneficiary);
+        for(uint8 i = 0; i < wallets.length; i++){
+            if(uint8(Roles.fees) == i)
+            continue;
+            wallets[i] = _beneficiary;
+        }
+        token.setUnpausedWallet(_beneficiary, true);
+    }
+
+
+    // Burn the investor tokens, if provided by the ICO scenario. Limited time available - BURN_TOKENS_TIME
+    // ***CHECK***SCENARIO***
+    // @ Do I have to use the function      no
+    // @ When it is possible to call        any time
+    // @ When it is launched automatically  -
+    // @ Who can call the function          admin
+    function massBurnTokens(address[] _beneficiary, uint256[] _value) external {
+        onlyAdmin(false);
+        require(endTime.add(renewal).add(BURN_TOKENS_TIME) > now);
+        require(_beneficiary.length == _value.length);
+        for(uint16 i; i<_beneficiary.length; i++) {
+            token.burn(_beneficiary[i],_value[i]);
+        }
+    }
+
+    // Extend the round time, if provided by the script. Extend the round only for
+    // a limited number of days - ROUND_PROLONGATE
+    // ***CHECK***SCENARIO***
+    // @ Do I have to use the function      no
+    // @ When it is possible to call        during active round
+    // @ When it is launched automatically  -
+    // @ Who can call the function          admins
+    function prolong(uint256 _duration) external {
+        onlyAdmin(false);
+        require(now > startTime && now < endTime.add(renewal) && isInitialized);//добавленно
+        renewal = renewal.add(_duration);
+        require(renewal <= ROUND_PROLONGATE);
+
+    }
     // If a little more than a year has elapsed (Round2 start date + 400 days), a smart contract
     // will allow you to send all the money to the Beneficiary, if any money is present. This is
     // possible if you mistakenly launch the Round2 for 30 years (not 30 days), investors will transfer
@@ -610,25 +693,18 @@ contract TossCrowdsale{
 
     // Within 400 days (FORCED_REFUND_TIMEOUT1) of the start of the Round, if it fails only investors can take money. After
     // the deadline this can also include the company as well as investors, depending on who is the first to use the method.
+    // @ Do I have to use the function      no
+    // @ When it is possible to call        -
+    // @ When it is launched automatically  -
+    // @ Who can call the function          beneficiary & manager
     function distructVault() public {
-        if (wallets[uint8(Roles.beneficiary)] == msg.sender && (now > startTime + FORCED_REFUND_TIMEOUT1)) {
+        require(address(vault) != 0x0);
+        if (wallets[uint8(Roles.beneficiary)] == msg.sender && (now > startTime.add(FORCED_REFUND_TIMEOUT1))) {
             vault.del(wallets[uint8(Roles.beneficiary)]);
         }
-        if (wallets[uint8(Roles.manager)] == msg.sender && (now > startTime + FORCED_REFUND_TIMEOUT2)) {
+        if (wallets[uint8(Roles.manager)] == msg.sender && (now > startTime.add(FORCED_REFUND_TIMEOUT2))) {
             vault.del(wallets[uint8(Roles.manager)]);
         }
-    }
-
-    function setShare(address _beneficiary, uint256 _value, uint256 _freezeTime) internal {
-        shares[_beneficiary] = shares[_beneficiary].add(_value);
-        overall = overall.add(_value);
-        if(_freezeTime > 0){
-            freezedShares[_beneficiary].value = freezedShares[_beneficiary].value.add(_value);
-            if(freezedShares[_beneficiary].dateTo < now + _freezeTime){
-                freezedShares[_beneficiary].dateTo = now + _freezeTime;
-            }
-        }
-
     }
 
 
@@ -669,17 +745,16 @@ contract TossCrowdsale{
 
     // This scenario ensures that for the sum of all fees in all currencies this value does not exceed hardcap.
 
-    // BTC - TODO!!!
-    // LTC - TODO!!!
-    // DASH - TODO!!!
-    // *** - TODO!!!
-    // Впишите сюда как комментарий все не эфирные кошельки. Их можно будет проверить (желающим провести аудит,
-    // когда токенсейл уже запущен).
-
     // ** QUINTILLIONS ** 10^18 / 1**18 / 1e18
+
+    // @ Do I have to use the function      no
+    // @ When it is possible to call        during active rounds
+    // @ When it is launched automatically  every day from cryptob2b token software
+    // @ Who can call the function          admins + observer
     function paymentsInOtherCurrency(uint256 _token, uint256 _value) public {
-        require(wallets[uint8(Roles.observer)] == msg.sender || wallets[uint8(Roles.manager)] == msg.sender);
-        bool withinPeriod = (now >= startTime && now <= endTime);
+        //require(wallets[uint8(Roles.observer)] == msg.sender || wallets[uint8(Roles.manager)] == msg.sender);
+        onlyAdmin(true);
+        bool withinPeriod = (now >= startTime && now <= endTime.add(renewal));
 
         bool withinCap = _value.add(ethWeiRaised) <= hardCap.add(overLimit);
         require(withinPeriod && withinCap && isInitialized);
@@ -687,6 +762,19 @@ contract TossCrowdsale{
         nonEthWeiRaised = _value;
         tokenReserved = _token;
 
+    }
+
+    function lokedMint(address _beneficiary, uint256 _value, uint256 _freezeTime) internal {
+        if(_freezeTime > 0){
+
+            uint256 totalBloked = token.freezedTokenOf(_beneficiary).add(_value);
+            uint256 pastDateUnfreeze = token.defrostDate(_beneficiary);
+            uint256 newDateUnfreeze = _freezeTime.add(now);
+            newDateUnfreeze = (pastDateUnfreeze > newDateUnfreeze ) ? pastDateUnfreeze : newDateUnfreeze;
+
+            token.freezeTokens(_beneficiary,totalBloked,newDateUnfreeze);
+        }
+        token.mint(_beneficiary,_value);
     }
 
 
@@ -700,26 +788,35 @@ contract TossCrowdsale{
 
         uint256 ProfitProcent = getProfitPercent();
 
-        Bonus memory curBonus = getBonuses(weiAmount);
+        uint256 value;
+        uint256 percent;
+        uint256 freezeTime;
+
+        (value,
+        percent,
+        freezeTime) = getBonuses(weiAmount);
+
+        Bonus memory curBonus = Bonus(value,percent,freezeTime);
 
         uint256 bonus = curBonus.procent;
 
-        // Scenario 1 - select max from all bonuses + check profit.maxAllProfit
+        // --------------------------------------------------------------------------------------------
+        // *** Scenario 1 - select max from all bonuses + check maxAllProfit
         uint256 totalProfit = (ProfitProcent < bonus) ? bonus : ProfitProcent;
-
-        // Scenario 2 - sum both bonuses + check profit.maxAllProfit
-        // uint256 totalProfit = bonus.add(ProfitProcent);
-        // totalProfit = (totalProfit > profit.maxAllProfit)? profit.maxAllProfit: totalProfit;
+        // *** Scenario 2 - sum both bonuses + check maxAllProfit
+        //uint256 totalProfit = bonus.add(ProfitProcent);
+        // --------------------------------------------------------------------------------------------
+        totalProfit = (totalProfit > maxAllProfit) ? maxAllProfit : totalProfit;
 
         // calculate token amount to be created
-        uint256 tokens = weiAmount.mul(rate).mul(totalProfit + 100).div(100000);
+        uint256 tokens = weiAmount.mul(rate).mul(totalProfit.add(100)).div(100 ether);
 
         // update state
         ethWeiRaised = ethWeiRaised.add(weiAmount);
 
-        setShare(beneficiary, tokens, curBonus.freezeTime);
+        lokedMint(beneficiary, tokens, curBonus.freezeTime);
 
-        TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
+        emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
         forwardFunds();
     }
@@ -728,5 +825,7 @@ contract TossCrowdsale{
     function () public payable {
         buyTokens(msg.sender);
     }
+
+
 
 }

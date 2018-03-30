@@ -8,43 +8,53 @@ contract FreezingToken is PausableToken {
     uint256 when;
     }
 
-    address public freezingManager;
-    mapping (address => bool) public freezingAgent;
 
     mapping (address => freeze) freezedTokens;
 
+
+    // @ Do I have to use the function      no
+    // @ When it is possible to call        any time
+    // @ When it is launched automatically  -
+    // @ Who can call the function          any
     function freezedTokenOf(address _beneficiary) public view returns (uint256 amount){
         freeze storage _freeze = freezedTokens[_beneficiary];
         if(_freeze.when < now) return 0;
         return _freeze.amount;
     }
 
+    // @ Do I have to use the function      no
+    // @ When it is possible to call        any time
+    // @ When it is launched automatically  -
+    // @ Who can call the function          any
     function defrostDate(address _beneficiary) public view returns (uint256 Date) {
         freeze storage _freeze = freezedTokens[_beneficiary];
         if(_freeze.when < now) return 0;
         return _freeze.when;
     }
 
-    function freezeTokens(address _beneficiary, uint256 _amount, uint256 _when) onlyOwner public {
+
+    // ***CHECK***SCENARIO***
+    function freezeTokens(address _beneficiary, uint256 _amount, uint256 _when) public {
+        require(owner == msg.sender || msg.sender == Crowdsale(owner).wallets(uint8(Crowdsale.Roles.manager)));
         freeze storage _freeze = freezedTokens[_beneficiary];
         _freeze.amount = _amount;
         _freeze.when = _when;
     }
 
-    function setFreezingManager(address _newAddress) external {
-        require(msg.sender == owner || msg.sender == freezingManager);
-        freezingAgent[freezingManager] = false;
-        freezingManager = _newAddress;
-        freezingAgent[freezingManager] = true;
+    // ***CHECK***SCENARIO***
+    function masFreezedTokens(address[] _beneficiary, uint256[] _amount, uint256[] _when) public {
+        require(owner == msg.sender || msg.sender == Crowdsale(owner).wallets(uint8(Crowdsale.Roles.manager)));
+        require(_beneficiary.length == _amount.length && _beneficiary.length == _when.length);
+        for(uint16 i = 0; i < _beneficiary.length; i++){
+            freeze storage _freeze = freezedTokens[_beneficiary[i]];
+            _freeze.amount = _amount[i];
+            _freeze.when = _when[i];
+        }
     }
 
-    function changeFreezingAgent(address _agent, bool _right) external {
-        require(msg.sender == freezingManager);
-        freezingAgent[_agent] = _right;
-    }
 
     function transferAndFreeze(address _to, uint256 _value, uint256 _when) external {
-        require(freezingAgent[msg.sender]);
+        require(unpausedWallet[msg.sender]);
         if(_when > 0){
             freeze storage _freeze = freezedTokens[_to];
             _freeze.amount = _freeze.amount.add(_value);
