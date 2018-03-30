@@ -67,7 +67,7 @@ contract Crowdsale{
     // Has only the right to call paymentsInOtherCurrency (please read the document)
     msg.sender,
 
-    // Bounty - 2% tokens
+    // Bounty - 7% tokens
     msg.sender,
 
     // Company, White list 1%
@@ -79,7 +79,7 @@ contract Crowdsale{
     // Founders, 10% freeze 1+1 year
     msg.sender,
 
-    // Fund, 11%
+    // Fund, 6%
     msg.sender
 
     ];
@@ -122,11 +122,11 @@ contract Crowdsale{
     // If the round does not attain this value before the closing date, the round is recognized as a
     // failure and investors take the money back (the founders will not interfere in any way).
     // **QUINTILLIONS** 10^18 / *10**18 / 1e18. Example: softcap=15ETH ==> use 15*10**18 (Solidity) or 15e18 (MEW)
-    uint256 public softCap = 2857 ether;
+    uint256 public softCap = 8500 ether;
 
     // The maximum possible amount of income
     // **QUINTILLIONS** 10^18 / *10**18 / 1e18. Example: hardcap=123.45ETH ==> use 123450*10**15 (Solidity) or 12345e15 (MEW)
-    uint256 public hardCap = 46429 ether;
+    uint256 public hardCap = 71500 ether;
 
     // If the last payment is slightly higher than the hardcap, then the usual contracts do
     // not accept it, because it goes beyond the hardcap. However it is more reasonable to accept the
@@ -192,7 +192,7 @@ contract Crowdsale{
         token.setUnpausedWallet(wallets[uint8(Roles.observer)], true);
 
         //bonuses.push(Bonus(0 finney, 0, 0));
-        bonuses.push(Bonus(71429 finney, 30, 30*5 days));
+        bonuses.push(Bonus(71000 finney, 30, 30*5 days));
 
         profits.push(Profit(15,1 days));
         profits.push(Profit(10,2 days));
@@ -366,16 +366,16 @@ contract Crowdsale{
         allocation = creator.createAllocation(token, now + 1 years /* stage N1 */, now + 2 years /* stage N2 */);
         token.setUnpausedWallet(allocation, true);
 
-        // Team = 6%, Founders = 10%, Fund = 11%    TOTAL = 27%
+        // Team = 6%, Founders = 10%, Fund = 6%    TOTAL = 27%
         allocation.addShare(wallets[uint8(Roles.team)],       6,  50); // only 50% - first year, stage N1  (and +50 for stage N2)
         allocation.addShare(wallets[uint8(Roles.founders)],  10,  50); // only 50% - first year, stage N1  (and +50 for stage N2)
-        allocation.addShare(wallets[uint8(Roles.fund)],      11, 100); // 100% - first year
+        allocation.addShare(wallets[uint8(Roles.fund)],       6, 100); // 100% - first year
 
         // 27% - tokens to freeze contract (Team+Founders+Fund)
-        token.mint(allocation, totalSaledToken.mul(27).div(70));
+        token.mint(allocation, totalSaledToken.mul(22).div(70));
 
-        // 2% - tokens to Bounty wallet
-        token.mint(wallets[uint8(Roles.bounty)], totalSaledToken.mul(2).div(70));
+        // 7% - tokens to Bounty wallet
+        token.mint(wallets[uint8(Roles.bounty)], totalSaledToken.mul(7).div(70));
 
         // 1% - tokens to Company (White List) wallet
         token.mint(wallets[uint8(Roles.company)], totalSaledToken.mul(1).div(70));
