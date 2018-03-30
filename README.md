@@ -4,7 +4,7 @@ Status: WIP & testing
 
 ## Requirements
 
-* Solidity >= 4.0.18
+* Solidity >= 4.0.21
 
 ## Description
 
