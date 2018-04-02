@@ -549,7 +549,7 @@ contract Crowdsale{
     // He can only cancel the pause before the appointed time.
     // ***CHECK***SCENARIO***
     // @ Do I have to use the function      YES YES YES
-    // @ When it is possible to call        after end of ICO  (or any time - not necessary)
+    // @ When it is possible to call        after end of Token Sale  (or any time - not necessary)
     // @ When it is launched automatically  -
     // @ Who can call the function          admins or anybody
     function tokenUnpause() external {
@@ -591,7 +591,7 @@ contract Crowdsale{
     // It is understood that after a general solution through this function all investors
     // will collectively (and voluntarily) move to a new token.
     // @ Do I have to use the function      no
-    // @ When it is possible to call        only after ICO!
+    // @ When it is possible to call        only after Token Sale!
     // @ When it is launched automatically  -
     // @ Who can call the function          admins
     function moveTokens(address _migrationAgent) public {
@@ -600,7 +600,7 @@ contract Crowdsale{
     }
 
     // @ Do I have to use the function      no
-    // @ When it is possible to call        only after ICO!
+    // @ When it is possible to call        only after Token Sale!
     // @ When it is launched automatically  -
     // @ Who can call the function          admins
     function migrateAll(address[] _holders) public {
@@ -647,7 +647,7 @@ contract Crowdsale{
     }
 
 
-    // Burn the investor tokens, if provided by the ICO scenario. Limited time available - BURN_TOKENS_TIME
+    // Burn the investor tokens, if provided by the Token Sale scenario. Limited time available - BURN_TOKENS_TIME
     // ***CHECK***SCENARIO***
     // @ Do I have to use the function      no
     // @ When it is possible to call        any time
