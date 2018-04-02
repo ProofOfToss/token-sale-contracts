@@ -111,13 +111,13 @@ contract Crowdsale{
     uint256 public renewal;
 
     // How many tokens (excluding the bonus) are transferred to the investor in exchange for 1 ETH
-    // **THOUSANDS** 10^18 for human, *10**18 for Solidity, 1e18 for MyEtherWallet (MEW).
+    // **QUINTILLIONS** 10^18 for human, *10**18 for Solidity, 1e18 for MyEtherWallet (MEW).
     // Example: if 1ETH = 40.5 Token ==> use 40500 finney
     uint256 public rate = 10000 ether;
 
     // ETH/USD rate in US$
     // **QUINTILLIONS** 10^18 / *10**18 / 1e18. Example: ETH/USD=$1000 ==> use 1000*10**18 (Solidity) or 1000 ether or 1000e18 (MEW)
-    uint256 public exchange  = 700 ether;
+    uint256 public exchange  = 700 ether; // not in use
 
     // If the round does not attain this value before the closing date, the round is recognized as a
     // failure and investors take the money back (the founders will not interfere in any way).
@@ -192,7 +192,7 @@ contract Crowdsale{
         token.setUnpausedWallet(wallets[uint8(Roles.observer)], true);
 
         //bonuses.push(Bonus(0 finney, 0, 0));
-        bonuses.push(Bonus(71000 finney, 30, 30*5 days));
+        bonuses.push(Bonus(71 ether, 30, 30*5 days));
 
         profits.push(Profit(15,1 days));
         profits.push(Profit(10,2 days));
@@ -547,15 +547,16 @@ contract Crowdsale{
     // completion of the TokenSale, anyone can remove a pause and allow the exchange to continue.
     // The manager does not interfere and will not be able to delay the term.
     // He can only cancel the pause before the appointed time.
+    // ***CHECK***SCENARIO***
     // @ Do I have to use the function      YES YES YES
-    // @ When it is possible to call        after end of ICO
+    // @ When it is possible to call        after end of ICO  (or any time - not necessary)
     // @ When it is launched automatically  -
     // @ Who can call the function          admins or anybody
     function tokenUnpause() external {
 
         require(wallets[uint8(Roles.manager)] == msg.sender
         || (now > endTime.add(renewal).add(USER_UNPAUSE_TOKEN_TIMEOUT) && TokenSale == TokenSaleType.round2 && isFinalized && goalReached()));
-        token.setPause(true);
+        token.setPause(false);
     }
 
     // Enable the "Pause of exchange". Available to the manager until the TokenSale is completed.
@@ -563,12 +564,12 @@ contract Crowdsale{
     // ***CHECK***SCENARIO***
     // @ Do I have to use the function      no
     // @ When it is possible to call        while Round2 not ended
-    // @ When it is launched automatically  before any rounds
+    // @ When it is launched automatically  Round0
     // @ Who can call the function          admins
     function tokenPause() public {
         onlyAdmin(false);
         require(!isFinalized);
-        token.setPause(false);
+        token.setPause(true);
     }
 
     // Pause of sale. Available to the manager.
