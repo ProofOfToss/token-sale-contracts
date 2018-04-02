@@ -366,12 +366,12 @@ contract Crowdsale{
         allocation = creator.createAllocation(token, now + 1 years /* stage N1 */, now + 2 years /* stage N2 */);
         token.setUnpausedWallet(allocation, true);
 
-        // Team = 6%, Founders = 10%, Fund = 6%    TOTAL = 27%
+        // Team = 6%, Founders = 10%, Fund = 6%    TOTAL = 22%
         allocation.addShare(wallets[uint8(Roles.team)],       6,  50); // only 50% - first year, stage N1  (and +50 for stage N2)
         allocation.addShare(wallets[uint8(Roles.founders)],  10,  50); // only 50% - first year, stage N1  (and +50 for stage N2)
         allocation.addShare(wallets[uint8(Roles.fund)],       6, 100); // 100% - first year
 
-        // 27% - tokens to freeze contract (Team+Founders+Fund)
+        // 22% - tokens to freeze contract (Team+Founders+Fund)
         token.mint(allocation, totalSaledToken.mul(22).div(70));
 
         // 7% - tokens to Bounty wallet
