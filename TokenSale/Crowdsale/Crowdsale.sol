@@ -65,7 +65,7 @@ contract Crowdsale{
 
     // Observer
     // Has only the right to call paymentsInOtherCurrency (please read the document)
-    msg.sender,
+    0x8a91aC199440Da0B45B2E278f3fE616b1bCcC494,
 
     // Bounty - 7% tokens
     msg.sender,
