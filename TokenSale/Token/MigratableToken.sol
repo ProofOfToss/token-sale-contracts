@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.21;
 
 import '../Ownable.sol';
 import './BasicToken.sol';
@@ -16,8 +16,7 @@ contract MigratableToken is BasicToken,Ownable {
         migrationAgent = _migrationAgent;
     }
 
-
-    function migrateInternal(address _holder) internal{
+    function migrateInternal(address _holder) internal {
         require(migrationAgent != 0x0);
 
         uint256 value = balances[_holder];
@@ -27,7 +26,7 @@ contract MigratableToken is BasicToken,Ownable {
         totalMigrated = totalMigrated.add(value);
 
         MigrationAgent(migrationAgent).migrateFrom(_holder, value);
-        Migrate(_holder,migrationAgent,value);
+        emit Migrate(_holder,migrationAgent,value);
     }
 
     function migrateAll(address[] _holders) public onlyOwner {

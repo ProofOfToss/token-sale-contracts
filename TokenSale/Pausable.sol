@@ -1,6 +1,7 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.21;
 
 import './Ownable.sol';
+import './Crowdsale/Crowdsale.sol';
 
 /**
  * @title Pausable
@@ -13,7 +14,7 @@ contract Pausable is Ownable {
     event Pause();
     event Unpause();
 
-    bool public paused = false;
+    bool public paused = true;
 
 
     /**
@@ -25,30 +26,23 @@ contract Pausable is Ownable {
     }
 
     // Add a wallet ignoring the "Exchange pause". Available to the owner of the contract.
-    function addUnpausedWallet(address _wallet) public onlyOwner {
-        unpausedWallet[_wallet] = true;
-    }
-
-    // Remove the wallet ignoring the "Exchange pause". Available to the owner of the contract.
-    function delUnpausedWallet(address _wallet) public onlyOwner {
-        unpausedWallet[_wallet] = false;
+    function setUnpausedWallet(address _wallet, bool mode) public {
+        require(owner == msg.sender || msg.sender == Crowdsale(owner).wallets(uint8(Crowdsale.Roles.manager)));
+        unpausedWallet[_wallet] = mode;
     }
 
     /**
      * @dev called by the owner to pause, triggers stopped state
      */
-    function pause() onlyOwner public {
-        require(!paused);
-        paused = true;
-        Pause();
+    function setPause(bool mode) public onlyOwner {
+        if (!paused && mode) {
+            paused = true;
+            emit Pause();
+        }
+        if (paused && !mode) {
+            paused = false;
+            emit Unpause();
+        }
     }
 
-    /**
-     * @dev called by the owner to unpause, returns to normal state
-     */
-    function unpause() onlyOwner public {
-        require(paused);
-        paused = false;
-        Unpause();
-    }
 }
