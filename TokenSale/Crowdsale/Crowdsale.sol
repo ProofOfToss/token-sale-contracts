@@ -80,6 +80,9 @@ contract Crowdsale{
     msg.sender,
 
     // Fund, 6%
+    msg.sender,
+
+    // Fees, 7% money
     msg.sender
 
     ];
@@ -106,8 +109,8 @@ contract Crowdsale{
     Profit[] public profits;
 
 
-    uint256 public startTime= 1523548800;
-    uint256 public endTime  = 1528819199;
+    uint256 public startTime= 1523548800; //1523491200;
+    uint256 public endTime  = 1528819199; //1526083199;
     uint256 public renewal;
 
     // How many tokens (excluding the bonus) are transferred to the investor in exchange for 1 ETH
@@ -297,7 +300,11 @@ contract Crowdsale{
             if(address(vault) != 0x0){
                 // Send ether to Beneficiary
                 //if(address(feesStrategy) == 0x0){
-                vault.close(wallets[uint8(Roles.beneficiary)],0x0,0);
+
+                //vault.close(wallets[uint8(Roles.beneficiary)],0x0,0);
+
+                vault.close(wallets[uint8(Roles.beneficiary)], wallets[uint8(Roles.fees)], ethWeiRaised.mul(7).div(100)); //7% for fees
+
                 //} else {
                 //    feesValue = feesStrategy.pay(ethWeiRaised);
                 //    vault.close(wallets[uint8(Roles.beneficiary)],wallets[uint8(Roles.fees)],feesValue);
