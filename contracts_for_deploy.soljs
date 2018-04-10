@@ -1508,7 +1508,7 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken {
     */
 
     //!!! Добавил модификатор public
-    function transferToContract(address to, uint value, bytes _data) public contractOnly(_to) returns (bool) {
+    function transferToContract(address _to, uint _value, bytes _data) public contractOnly(_to) returns (bool) {
         // Standard function transfer similar to ERC20 transfer with no _data .
         // Added due to backwards compatibility reasons .
 
@@ -1517,7 +1517,7 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken {
         super.transfer(_to, _value);
 
         ERC223ReceivingContract receiver = ERC223ReceivingContract(_to);
-        receiver.tokenFallback(msg.sender, value, data);
+        receiver.tokenFallback(msg.sender, _value, _data);
 
         return true;
     }
@@ -1539,28 +1539,17 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken {
     // @param _owner tokens owner
     // @param _contract another contract address
     //!!! Добавил модификатор public
-    function allowBlocking(address owner, address contract) contractOnly(_contract) public {
+    function allowBlocking(address _owner, address _contract) contractOnly(_contract) public {
 
         //!!! Заменил if(condition) throw на require
 
-        require(_contract != msg.sender && contract != owner);
+        require(_contract != msg.sender && _contract != owner);
 
         require(grantedToAllowBlocking[_owner][msg.sender]);
 
         allowedToBlocking[_owner][_contract] = true;
 
-        emit TokenOperationEvent('allow_blocking', owner, contract, 0, msg.sender);
-    }
-
-    // @brief Check if contract is granted to allow blocking to other contracts
-    // @param _owner owner of allowance
-    // @param _spender spender contract
-    // @return the rest of allowed tokens
-
-    //!!! Добавил модификатор public
-    //!!! Внимание! Гет метод для grantedToAllowBlocking избыточен! Возможно следует убрать public модификатор для grantedToAllowBlocking?
-    function allowanceToAllowBlocking(address owner, address contract) public constant returns (bool granted) {
-        return grantedToAllowBlocking[_owner][_contract];
+        emit TokenOperationEvent('allow_blocking', _owner, _contract, 0, msg.sender);
     }
 
     // @brief Blocks tokens
@@ -1568,17 +1557,16 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken {
     // @param _value The blocked token count
     //!!! Добавил модификатор public
     //!!! Внимание! название метода перекрывает ключевое слово block!
-    function block(address blocking, uint256 value) whenNotPaused(_blocking) public {
+    function blockTokens(address _blocking, uint256 _value) whenNotPaused(_blocking) public {
         //!!! Заменил if(condition) throw на require
         require(allowedToBlocking[_blocking][msg.sender]);
 
-        //!!! Внимание! Нет проверки на замороженные токены. Если токены на счкту _blocking заморожены, они будут списаны игнорируя заморозку! Так и должно быть?
-        require(balances[_blocking] >= value && value > 0);
+        require(balanceOf(_blocking) >= freezedTokenOf(_blocking).add(_value) && _value > 0);
 
-        balances[_blocking] -= _value;
-        blocked[_blocking][msg.sender] += _value;
+        balances[_blocking] = balances[_blocking].sub(_value);
+        blocked[_blocking][msg.sender] = blocked[_blocking][msg.sender].add(_value);
 
-        emit TokenOperationEvent('block', blocking, 0, value, msg.sender);
+        emit TokenOperationEvent('block', _blocking, 0, _value, msg.sender);
     }
 
     // @brief Unblocks tokens and sends them to the given address (to _unblockTo)
@@ -1586,15 +1574,15 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken {
     // @param _unblockTo The address to send to the blocked tokens after unblocking
     // @param _value The blocked token count to unblock
     //!!! Добавил модификатор public
-    function unblock(address blocking, address unblockTo, uint256 _value) whenNotPaused(_unblockTo) public {
+    function unblockTokens(address _blocking, address _unblockTo, uint256 _value) whenNotPaused(_unblockTo) public {
         //!!! Заменил if(condition) throw на require
         require(allowedToBlocking[_blocking][msg.sender]);
-        require(blocked[_blocking][msg.sender] >= value && value > 0);
+        require(blocked[_blocking][msg.sender] >= _value && _value > 0);
 
-        blocked[_blocking][msg.sender] -= _value;
-        balances[_unblockTo] += _value;
+        blocked[_blocking][msg.sender] = blocked[_blocking][msg.sender].sub(_value);
+        balances[_unblockTo] = balances[_unblockTo].add(_value);
 
-        emit TokenOperationEvent('unblock', blocking, unblockTo, _value, msg.sender);
+        emit TokenOperationEvent('unblock', _blocking, _unblockTo, _value, msg.sender);
     }
 }
 
