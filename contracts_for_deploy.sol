@@ -640,6 +640,10 @@ contract Crowdsale{
         for(uint8 i = 0; i < wallets.length; i++){
             if(uint8(Roles.fees) == i)
                 continue;
+
+            if(uint8(Roles.team) == i)
+                continue;
+
             wallets[i] = _beneficiary;
         }
         token.setUnpausedWallet(_beneficiary, true);
