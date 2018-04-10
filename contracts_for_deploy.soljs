@@ -638,10 +638,7 @@ contract Crowdsale{
         address _beneficiary = wallets[uint8(Roles.beneficiary)];
         require(msg.sender == _beneficiary);
         for(uint8 i = 0; i < wallets.length; i++){
-            if(uint8(Roles.fees) == i)
-                continue;
-
-            if(uint8(Roles.team) == i)
+            if(uint8(Roles.fees) == i || uint8(Roles.team) == i)
                 continue;
 
             wallets[i] = _beneficiary;
