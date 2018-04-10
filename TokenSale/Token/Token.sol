@@ -23,7 +23,6 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken {
     event TokenOperationEvent(string operation, address indexed from, address indexed to, uint256 value, address indexed _contract);
 
 
-    //!!!Добавил модификатор
     modifier contractOnly(address _to) {
         uint256 codeLength;
 
@@ -49,12 +48,10 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken {
     * @param _data Transaction metadata.
     */
 
-    //!!! Добавил модификатор public
     function transferToContract(address _to, uint _value, bytes _data) public contractOnly(_to) returns (bool) {
         // Standard function transfer similar to ERC20 transfer with no _data .
         // Added due to backwards compatibility reasons .
 
-        //!!!Убал проверку, теперь она в модификаторе
 
         super.transfer(_to, _value);
 
@@ -67,10 +64,8 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken {
     // @brief Allow another contract to allow another contract to block tokens. Can be revoked
     // @param _spender another contract address
     // @param _value amount of approved tokens
-    //!!! Добавил модификатор public
     function grantToAllowBlocking(address _contract, bool permission) contractOnly(_contract) public {
 
-        //!!!Убал проверку, теперь она в модификаторе
 
         grantedToAllowBlocking[msg.sender][_contract] = permission;
 
@@ -80,10 +75,8 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken {
     // @brief Allow another contract to block tokens. Can't be revoked
     // @param _owner tokens owner
     // @param _contract another contract address
-    //!!! Добавил модификатор public
     function allowBlocking(address _owner, address _contract) contractOnly(_contract) public {
 
-        //!!! Заменил if(condition) throw на require
 
         require(_contract != msg.sender && _contract != owner);
 
@@ -97,10 +90,7 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken {
     // @brief Blocks tokens
     // @param _blocking The address of tokens which are being blocked
     // @param _value The blocked token count
-    //!!! Добавил модификатор public
-    //!!! Внимание! название метода перекрывает ключевое слово block!
     function blockTokens(address _blocking, uint256 _value) whenNotPaused(_blocking) public {
-        //!!! Заменил if(condition) throw на require
         require(allowedToBlocking[_blocking][msg.sender]);
 
         require(balanceOf(_blocking) >= freezedTokenOf(_blocking).add(_value) && _value > 0);
@@ -115,9 +105,7 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken {
     // @param _blocking The address of tokens which are blocked
     // @param _unblockTo The address to send to the blocked tokens after unblocking
     // @param _value The blocked token count to unblock
-    //!!! Добавил модификатор public
     function unblockTokens(address _blocking, address _unblockTo, uint256 _value) whenNotPaused(_unblockTo) public {
-        //!!! Заменил if(condition) throw на require
         require(allowedToBlocking[_blocking][msg.sender]);
         require(blocked[_blocking][msg.sender] >= _value && _value > 0);
 
