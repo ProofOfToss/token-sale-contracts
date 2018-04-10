@@ -1467,9 +1467,11 @@ contract ERC223ReceivingContract {
  
 // (A2)
 // Contract token
-contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken{
+contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken {
     string public constant name = "TOSS";
+
     string public constant symbol = "PROOF OF TOSS";
+
     uint8 public constant decimals = 18;
 
     mapping (address => mapping (address => bool)) public grantedToAllowBlocking; // Address of smart contract that can allow other contracts to block tokens
@@ -1495,8 +1497,8 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken{
         uint codeLength;
 
         assembly {
-            // Retrieve the size of the code on target address, this needs assembly .
-            codeLength := extcodesize(_to)
+        // Retrieve the size of the code on target address, this needs assembly .
+        codeLength := extcodesize(_to)
         }
 
         require(codeLength > 0);
@@ -1515,11 +1517,12 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken{
     function grantToAllowBlocking(address _contract, bool permission) {
         uint codeLength;
 
-        assembly { // Retrieve the size of the code on target address, this needs assembly .
-            codeLength := extcodesize(_contract)
+        assembly {// Retrieve the size of the code on target address, this needs assembly .
+        codeLength := extcodesize(_contract)
         }
 
-        if (codeLength <= 0) throw; // Only smart contracts allowed
+        if (codeLength <= 0) throw;
+        // Only smart contracts allowed
 
         grantedToAllowBlocking[msg.sender][_contract] = permission;
 
@@ -1532,14 +1535,15 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken{
     function allowBlocking(address _owner, address _contract) {
         uint codeLength;
 
-        assembly { // Retrieve the size of the code on target address, this needs assembly .
-            codeLength := extcodesize(_contract)
+        assembly {// Retrieve the size of the code on target address, this needs assembly .
+        codeLength := extcodesize(_contract)
         }
 
-        if (codeLength <= 0) throw; // Only smart contracts allowed
+        if (codeLength <= 0) throw;
+        // Only smart contracts allowed
         if (_contract == msg.sender) throw;
         if (_contract == _owner) throw;
-        if (! grantedToAllowBlocking[_owner][msg.sender]) throw;
+        if (!grantedToAllowBlocking[_owner][msg.sender]) throw;
 
         allowedToBlocking[_owner][_contract] = true;
 
@@ -1558,7 +1562,7 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken{
     // @param _blocking The address of tokens which are being blocked
     // @param _value The blocked token count
     function block(address _blocking, uint256 _value) whenNotPaused(_blocking) {
-        if (! allowedToBlocking[_blocking][msg.sender]) throw;
+        if (!allowedToBlocking[_blocking][msg.sender]) throw;
         if (balances[_blocking] < _value || _value <= 0) throw;
 
         balances[_blocking] -= _value;
@@ -1573,7 +1577,7 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken{
     // @param _value The blocked token count to unblock
     function unblock(address _blocking, address _unblockTo, uint256 _value) whenNotPaused(_unblockTo) {
         if (blocked[_blocking][msg.sender] == 0) throw;
-        if (! allowedToBlocking[_blocking][msg.sender]) throw;
+        if (!allowedToBlocking[_blocking][msg.sender]) throw;
         if (blocked[_blocking][msg.sender] < _value) throw;
 
         blocked[_blocking][msg.sender] -= _value;
