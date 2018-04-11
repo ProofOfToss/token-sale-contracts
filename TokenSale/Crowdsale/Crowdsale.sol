@@ -109,8 +109,8 @@ contract Crowdsale{
     Profit[] public profits;
 
 
-    uint256 public startTime= 1523548800; //1523491200;
-    uint256 public endTime  = 1528819199; //1526083199;
+    uint256 public startTime= 1524560400;
+    uint256 public endTime  = 1529830740;
     uint256 public renewal;
 
     // How many tokens (excluding the bonus) are transferred to the investor in exchange for 1 ETH
