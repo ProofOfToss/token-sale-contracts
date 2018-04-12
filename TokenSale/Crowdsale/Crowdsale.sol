@@ -31,7 +31,6 @@ contract Crowdsale{
     Token public token;
     RefundVault public vault;
     AllocationTOSS public allocation;
-    //FeesStrategy public feesStrategy;
 
     bool public isFinalized;
     bool public isInitialized;
@@ -184,17 +183,12 @@ contract Crowdsale{
             vault = creator.createRefund();
         }
 
-        //        if (wallets[uint8(Roles.fees)] != 0x0) {
-        //            feesStrategy = creator.createFeesStrategy();
-        //        }
-
         token.setUnpausedWallet(wallets[uint8(Roles.accountant)], true);
         token.setUnpausedWallet(wallets[uint8(Roles.manager)], true);
         token.setUnpausedWallet(wallets[uint8(Roles.bounty)], true);
         token.setUnpausedWallet(wallets[uint8(Roles.company)], true);
         token.setUnpausedWallet(wallets[uint8(Roles.observer)], true);
 
-        //bonuses.push(Bonus(0 finney, 0, 0));
         bonuses.push(Bonus(71 ether, 30, 30*5 days));
 
         profits.push(Profit(15,1 days));
@@ -232,9 +226,6 @@ contract Crowdsale{
         if(address(vault) != 0x0){
             vault.deposit.value(msg.value)(msg.sender);
         }else {
-            //            if(address(feesStrategy) != 0x0 ){
-            //                wallets[uint8(Roles.fees)].transfer(feesStrategy.pay(msg.value));
-            //            }
             if(address(this).balance > 0){
                 wallets[uint8(Roles.beneficiary)].transfer(address(this).balance);
             }
@@ -299,16 +290,7 @@ contract Crowdsale{
 
             if(address(vault) != 0x0){
                 // Send ether to Beneficiary
-                //if(address(feesStrategy) == 0x0){
-
-                //vault.close(wallets[uint8(Roles.beneficiary)],0x0,0);
-
                 vault.close(wallets[uint8(Roles.beneficiary)], wallets[uint8(Roles.fees)], ethWeiRaised.mul(7).div(100)); //7% for fees
-
-                //} else {
-                //    feesValue = feesStrategy.pay(ethWeiRaised);
-                //    vault.close(wallets[uint8(Roles.beneficiary)],wallets[uint8(Roles.fees)],feesValue);
-                //}
             }
 
             // if there is anything to give
@@ -345,7 +327,6 @@ contract Crowdsale{
                 chargeBonuses = true;
 
                 totalSaledToken = token.totalSupply();
-                //partners = true;
 
             }
 
@@ -530,24 +511,6 @@ contract Crowdsale{
         }
         return (bonuses[i-1].value,bonuses[i-1].procent,bonuses[i-1].freezeTime);
     }
-
-    // The ability to quickly check Round1 (only for Round1, only 1 time). Completes the Round1 by
-    // transferring the specified number of tokens to the Accountant's wallet. Available to the Manager.
-    // Use only if this is provided by the script and white paper. In the normal scenario, it
-    // does not call and the funds are raised normally. We recommend that you delete this
-    // function entirely, so as not to confuse the auditors. Initialize & Finalize not needed.
-    // ** QUINTILIONS **  10^18 / 1**18 / 1e18
-    // @ Do I have to use the function      no, see your scenario
-    // @ When it is possible to call        after Round0 and before Round2
-    // @ When it is launched automatically  -
-    // @ Who can call the function          admins
-    //    function fastTokenSale(uint256 _totalSupply) external {
-    //      onlyAdmin(false);
-    //        require(TokenSale == TokenSaleType.round1 && !isInitialized);
-    //        token.mint(wallets[uint8(Roles.accountant)], _totalSupply);
-    //        TokenSale = TokenSaleType.round2;
-    //    }
-
 
     // Remove the "Pause of exchange". Available to the manager at any time. If the
     // manager refuses to remove the pause, then 30-120 days after the successful
@@ -812,8 +775,7 @@ contract Crowdsale{
         // --------------------------------------------------------------------------------------------
         // *** Scenario 1 - select max from all bonuses + check maxAllProfit
         uint256 totalProfit = (ProfitProcent < bonus) ? bonus : ProfitProcent;
-        // *** Scenario 2 - sum both bonuses + check maxAllProfit
-        //uint256 totalProfit = bonus.add(ProfitProcent);
+
         // --------------------------------------------------------------------------------------------
         totalProfit = (totalProfit > maxAllProfit) ? maxAllProfit : totalProfit;
 
