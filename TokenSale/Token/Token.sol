@@ -18,7 +18,7 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken {
 
     mapping (address => mapping (address => bool)) public grantedToAllowBlocking; // Address of smart contract that can allow other contracts to block tokens
     mapping (address => mapping (address => bool)) public allowedToBlocking; // Address of smart contract that can block tokens
-    mapping (address => mapping (address => uint256)) public blocked; // Blocked tokens
+    mapping (address => mapping (address => uint256)) public blocked; // Blocked tokens per blocker
 
     event TokenOperationEvent(string operation, address indexed from, address indexed to, uint256 value, address indexed _contract);
 
@@ -48,7 +48,7 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken {
     * @param _data Transaction metadata.
     */
 
-    function transferToContract(address _to, uint _value, bytes _data) public contractOnly(_to) returns (bool) {
+    function transferToContract(address _to, uint256 _value, bytes _data) public contractOnly(_to) returns (bool) {
         // Standard function transfer similar to ERC20 transfer with no _data .
         // Added due to backwards compatibility reasons .
 
@@ -98,6 +98,7 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken {
         balances[_blocking] = balances[_blocking].sub(_value);
         blocked[_blocking][msg.sender] = blocked[_blocking][msg.sender].add(_value);
 
+        emit Transfer(_blocking, address(0), _value);
         emit TokenOperationEvent('block', _blocking, 0, _value, msg.sender);
     }
 
@@ -111,6 +112,12 @@ contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken {
 
         blocked[_blocking][msg.sender] = blocked[_blocking][msg.sender].sub(_value);
         balances[_unblockTo] = balances[_unblockTo].add(_value);
+
+        emit Transfer(address(0), _blocking, _value);
+
+        if (_blocking != _unblockTo) {
+            emit Transfer(_blocking, _unblockTo, _value);
+        }
 
         emit TokenOperationEvent('unblock', _blocking, _unblockTo, _value, msg.sender);
     }
