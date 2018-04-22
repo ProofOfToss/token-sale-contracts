@@ -42,11 +42,11 @@ contract Crowdsale{
 
         // Beneficiary
         // Receives all the money (when finalizing Round1 & Round2)
-        msg.sender,
+        0xAa951F7c52055B89d3F281c73d557275070cBBfb,
 
         // Accountant
         // Receives all the tokens for non-ETH investors (when finalizing Round1 & Round2)
-        msg.sender,
+        0xD29f0aE1621F4Be48C4DF438038E38af546DA498,
 
         // Manager
         // All rights except the rights to receive tokens or money. Has the right to change any other
@@ -61,22 +61,22 @@ contract Crowdsale{
         0x8a91aC199440Da0B45B2E278f3fE616b1bCcC494,
 
         // Bounty - 7% tokens
-        msg.sender,
+        0xd7AC0393e2B29D8aC6221CF69c27171aba6278c4,
 
         // Company, White list 1%
-        msg.sender,
+        0x765f60E314766Bc25eb2a9F66991Fe867D42A449,
 
         // Team, 6%, freeze 1+1 year
-        msg.sender,
+        0xF9f0c53c07803a2670a354F3de88482393ABdBac,
 
         // Founders, 10% freeze 1+1 year
-        msg.sender,
+        0x61628D884b5F137c3D3e0b04b90DaE4402f32510,
 
         // Fund, 6%
-        msg.sender,
+        0xd833899Ea1b84E980daA13553CE13D1512bF0774,
 
         // Fees, 7% money
-        msg.sender
+        0xEB29e654AFF7658394C9d413dDC66711ADD44F59
 
     ];
  
@@ -103,7 +103,7 @@ contract Crowdsale{
  
  
     uint256 public startTime= 1524560400;
-    uint256 public endTime  = 1529830740;
+    uint256 public endTime  = 1529830799;
     uint256 public renewal;
  
     // How many tokens (excluding the bonus) are transferred to the investor in exchange for 1 ETH
@@ -708,7 +708,10 @@ contract Crowdsale{
     // receives significant amounts.
  
     // This scenario ensures that for the sum of all fees in all currencies this value does not exceed hardcap.
- 
+
+    // Addresses for other currencies:
+    // BTC Address: 3HiqVz6wFhSHZ3QUbX9C8GUPSjdDuksPJA
+
     // ** QUINTILLIONS ** 10^18 / 1**18 / 1e18
 
     // @ Do I have to use the function      no
