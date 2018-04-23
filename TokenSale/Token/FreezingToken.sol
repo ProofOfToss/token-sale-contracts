@@ -34,24 +34,11 @@ contract FreezingToken is PausableToken {
 
 
     // ***CHECK***SCENARIO***
-    function freezeTokens(address _beneficiary, uint256 _amount, uint256 _when) public {
-        require(owner == msg.sender || msg.sender == Crowdsale(owner).wallets(uint8(Crowdsale.Roles.manager)));
+    function freezeTokens(address _beneficiary, uint256 _amount, uint256 _when) public onlyOwner {
         freeze storage _freeze = freezedTokens[_beneficiary];
         _freeze.amount = _amount;
         _freeze.when = _when;
     }
-
-    // ***CHECK***SCENARIO***
-    function masFreezedTokens(address[] _beneficiary, uint256[] _amount, uint256[] _when) public {
-        require(owner == msg.sender || msg.sender == Crowdsale(owner).wallets(uint8(Crowdsale.Roles.manager)));
-        require(_beneficiary.length == _amount.length && _beneficiary.length == _when.length);
-        for(uint16 i = 0; i < _beneficiary.length; i++){
-            freeze storage _freeze = freezedTokens[_beneficiary[i]];
-            _freeze.amount = _amount[i];
-            _freeze.when = _when[i];
-        }
-    }
-
 
     function transferAndFreeze(address _to, uint256 _value, uint256 _when) external {
         require(unpausedWallet[msg.sender]);
