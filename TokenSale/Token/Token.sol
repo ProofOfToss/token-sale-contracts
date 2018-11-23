@@ -3,13 +3,13 @@ pragma solidity ^0.4.21;
 import './FreezingToken.sol';
 import './MintableToken.sol';
 import './MigratableToken.sol';
-import './BurnableToken.sol';
+import './UnburnableListToken.sol';
 import '../Pausable.sol';
 import "../ERC223ReceivingContract.sol";
 
 // (A2)
 // Contract token
-contract Token is FreezingToken, MintableToken, MigratableToken, BurnableToken {
+contract Token is FreezingToken, MintableToken, MigratableToken, UnburnableListToken {
     string public constant name = "TOSS";
 
     string public constant symbol = "PROOF OF TOSS";
