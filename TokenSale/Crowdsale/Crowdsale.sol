@@ -91,17 +91,11 @@ contract Crowdsale{
     struct Bonus {
     uint256 value;
     uint256 procent;
-    uint256 freezeTime;
     }
 
     struct Profit {
     uint256 percent;
     uint256 duration;
-    }
-
-    struct Freezed {
-    uint256 value;
-    uint256 dateTo;
     }
 
     Bonus[] public bonuses;
@@ -431,7 +425,7 @@ contract Crowdsale{
     function setup(uint256 _startTime, uint256 _endTime, uint256 _softCap, uint256 _hardCap,
     uint256 _rate, uint256 _exchange,
     uint256 _maxAllProfit, uint256 _overLimit, uint256 _minPay,
-    uint256[] _durationTB , uint256[] _percentTB, uint256[] _valueVB, uint256[] _percentVB, uint256[] _freezeTimeVB) public
+    uint256[] _durationTB , uint256[] _percentTB, uint256[] _valueVB, uint256[] _percentVB) public
     {
 
         onlyAdmin(false);
@@ -458,10 +452,10 @@ contract Crowdsale{
         exchange = _exchange;
         maxAllProfit = _maxAllProfit;
 
-        require(_valueVB.length == _percentVB.length && _valueVB.length == _freezeTimeVB.length);
+        require(_valueVB.length == _percentVB.length);
         bonuses.length = _valueVB.length;
         for(uint256 i = 0; i < _valueVB.length; i++){
-            bonuses[i] = Bonus(_valueVB[i],_percentVB[i],_freezeTimeVB[i]);
+            bonuses[i] = Bonus(_valueVB[i],_percentVB[i]);
         }
 
         require(_percentTB.length == _durationTB.length);
@@ -509,7 +503,7 @@ contract Crowdsale{
                 break;
             }
         }
-        return (bonuses[i-1].value,bonuses[i-1].procent,bonuses[i-1].freezeTime);
+        return (bonuses[i-1].value,bonuses[i-1].procent);
     }
 
     // Remove the "Pause of exchange". Available to the manager at any time. If the
@@ -739,20 +733,6 @@ contract Crowdsale{
 
     }
 
-    function lokedMint(address _beneficiary, uint256 _value, uint256 _freezeTime) internal {
-        if(_freezeTime > 0){
-
-            uint256 totalBloked = token.freezedTokenOf(_beneficiary).add(_value);
-            uint256 pastDateUnfreeze = token.defrostDate(_beneficiary);
-            uint256 newDateUnfreeze = _freezeTime.add(now);
-            newDateUnfreeze = (pastDateUnfreeze > newDateUnfreeze ) ? pastDateUnfreeze : newDateUnfreeze;
-
-            token.freezeTokens(_beneficiary,totalBloked,newDateUnfreeze);
-        }
-        token.mint(_beneficiary,_value);
-    }
-
-
     // The function for obtaining smart contract funds in ETH. If all the checks are true, the token is
     // transferred to the buyer, taking into account the current bonus.
     function buyTokens(address beneficiary) public payable {
@@ -765,13 +745,10 @@ contract Crowdsale{
 
         uint256 value;
         uint256 percent;
-        uint256 freezeTime;
 
-        (value,
-        percent,
-        freezeTime) = getBonuses(weiAmount);
+        (value, percent) = getBonuses(weiAmount);
 
-        Bonus memory curBonus = Bonus(value,percent,freezeTime);
+        Bonus memory curBonus = Bonus(value, percent);
 
         uint256 bonus = curBonus.procent;
 
@@ -788,7 +765,7 @@ contract Crowdsale{
         // update state
         ethWeiRaised = ethWeiRaised.add(weiAmount);
 
-        lokedMint(beneficiary, tokens, curBonus.freezeTime);
+        token.mint(benificiary, tokens);
 
         emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
