@@ -20,8 +20,8 @@ contract Creator{
         return allocation;
     }
 
-    function createPeriodicAllocation(Token _token, uint256 _unlockStart) external returns (PeriodicAllocation) {
-        PeriodicAllocation allocation = new PeriodicAllocation(_token,_unlockStart);
+    function createPeriodicAllocation(Token _token) external returns (PeriodicAllocation) {
+        PeriodicAllocation allocation = new PeriodicAllocation(_token);
         allocation.transferOwnership(msg.sender);
         return allocation;
     }
