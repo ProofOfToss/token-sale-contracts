@@ -183,7 +183,7 @@ contract Crowdsale{
         token.setUnpausedWallet(wallets[uint8(Roles.company)], true);
         token.setUnpausedWallet(wallets[uint8(Roles.observer)], true);
 
-        bonuses.push(Bonus(71 ether, 30, 30*5 days));
+        bonuses.push(Bonus(71 ether, 30));
 
         profits.push(Profit(15,1 days));
         profits.push(Profit(10,2 days));
@@ -419,7 +419,7 @@ contract Crowdsale{
 
     // Customize. The arguments are described in the constructor above.
     // @ Do I have to use the function      yes
-    // @ When it is possible to call        before each rond
+    // @ When it is possible to call        before each round
     // @ When it is launched automatically  -
     // @ Who can call the function          admins
     function setup(uint256 _startTime, uint256 _endTime, uint256 _softCap, uint256 _hardCap,
@@ -493,9 +493,9 @@ contract Crowdsale{
         return 0;
     }
 
-    function getBonuses(uint256 _value) public constant returns (uint256,uint256,uint256){
+    function getBonuses(uint256 _value) public constant returns (uint256,uint256){
         if(bonuses.length == 0 || bonuses[0].value > _value){
-            return (0,0,0);
+            return (0,0);
         }
         uint16 i = 1;
         for(i; i < bonuses.length; i++){
@@ -765,7 +765,7 @@ contract Crowdsale{
         // update state
         ethWeiRaised = ethWeiRaised.add(weiAmount);
 
-        token.mint(benificiary, tokens);
+        token.mint(beneficiary, tokens);
 
         emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
