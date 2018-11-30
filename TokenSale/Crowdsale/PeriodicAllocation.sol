@@ -24,9 +24,15 @@ contract PeriodicAllocation is Ownable {
 
     ERC20Basic public token;
 
-    function PeriodicAllocation(ERC20Basic _token, uint256 _unlockStart) public {
-        unlockStart = _unlockStart;
+    function PeriodicAllocation(ERC20Basic _token) public {
         token = _token;
+    }
+
+    function setUnlockStart(uint256 _unlockStart) onlyOwner external {
+        require(unlockStart == 0);
+        require(_unlockStart >= now);
+
+        unlockStart = _unlockStart;
     }
 
     function addShare(address _beneficiary, uint256 _proportion, uint256 _periods, uint256 _periodLength) onlyOwner external {
@@ -36,7 +42,8 @@ contract PeriodicAllocation is Ownable {
 
     // If the time of freezing expired will return the funds to the owner.
     function unlockFor(address _owner) public {
-        require(now >= unlockStart);
+        require(unlockStart > 0);
+        require(now >= (unlockStart.add(shares[_owner].periodLength)));
         uint256 share = shares[_owner].proportion;
         uint256 periodsSinceUnlockStart = (now.sub(unlockStart)).div(shares[_owner].periodLength);
 
