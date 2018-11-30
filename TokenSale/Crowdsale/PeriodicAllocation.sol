@@ -4,7 +4,6 @@ import '../Ownable.sol';
 import '../SafeMath.sol';
 import '../Token/ERC20Basic.sol';
 
-// (B)
 // The contract for freezing tokens for the players and investors..
 contract PeriodicAllocation is Ownable {
     using SafeMath for uint256;
