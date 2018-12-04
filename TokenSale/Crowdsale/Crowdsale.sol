@@ -4,6 +4,7 @@ import '../SafeMath.sol';
 import '../Token/Token.sol';
 import './RefundVault.sol';
 import './PeriodicAllocation.sol';
+import './AllocationQueue.sol';
 import './Creator.sol';
 
 // (A1)
@@ -31,6 +32,7 @@ contract Crowdsale{
     Token public token;
     RefundVault public vault;
     PeriodicAllocation public allocation;
+    AllocationQueue public allocationQueue;
 
     bool public isFinalized;
     bool public isInitialized;
@@ -44,7 +46,7 @@ contract Crowdsale{
     // to receive them. To enable this, the Manager must either enter specific wallets here, or perform
     // this via method changeWallet. In the finalization methods it is written which wallet and
     // what percentage of tokens are received.
-    address[10] public wallets = [
+    address[12] public wallets = [
 
     // Beneficiary
     // Receives all the money (when finalizing Round1 & Round2)
@@ -180,6 +182,7 @@ contract Crowdsale{
 
         token = creator.createToken();
         allocation = creator.createPeriodicAllocation(token);
+        allocationQueue = creator.createAllocationQueue(token);
 
         if (creator2) {
             vault = creator.createRefund();
@@ -190,6 +193,8 @@ contract Crowdsale{
         token.setUnpausedWallet(wallets[uint8(Roles.bounty)], true);
         token.setUnpausedWallet(wallets[uint8(Roles.company)], true);
         token.setUnpausedWallet(wallets[uint8(Roles.observer)], true);
+        token.setUnpausedWallet(wallets[uint8(Roles.players)], true);
+        token.setUnpausedWallet(wallets[uint8(Roles.airdrop)], true);
 
         bonuses.push(Bonus(71 ether, 30));
 
@@ -727,43 +732,35 @@ contract Crowdsale{
 
     }
 
-    function lokedMint(address _beneficiary, uint256 _value, uint256 _freezeTime) internal {
-        if(_freezeTime > 0){
-
-            uint256 totalBloked = token.freezedTokenOf(_beneficiary).add(_value);
-            uint256 pastDateUnfreeze = token.defrostDate(_beneficiary);
-            uint256 newDateUnfreeze = _freezeTime.add(now);
-            newDateUnfreeze = (pastDateUnfreeze > newDateUnfreeze ) ? pastDateUnfreeze : newDateUnfreeze;
-
-            token.freezeTokens(_beneficiary,totalBloked,newDateUnfreeze);
-        }
-        token.mint(_beneficiary,_value);
+    function queueMint(address _beneficiary, uint256 _value, uint256 _freezeTime) internal {
+        token.mint(address(allocationQueue), _value);
+        allocationQueue.addShare(_beneficiary, _value, _freezeTime);
     }
 
     function systemWalletsMint(uint256 tokens) internal {
         // 4% – tokens for Airdrop, freeze 2 month
-        lokedMint(wallets[uint8(Roles.airdrop)], tokens.mul(4).div(50), 60 days);
+        queueMint(wallets[uint8(Roles.airdrop)], tokens.mul(4).div(50), 60 days);
 
         // 7% - tokens for Players and Investors
         token.mint(address(allocation), tokens.mul(7).div(50));
 
         // 4% - tokens to Company (White List) wallet, freeze 1 month
-        lokedMint(wallets[uint8(Roles.company)], tokens.mul(4).div(50), 30 days);
+        queueMint(wallets[uint8(Roles.company)], tokens.mul(4).div(50), 30 days);
 
         // 7% - tokens to Team wallet, freeze 50% 6 month, 50% 12 month
-        lokedMint(wallets[uint8(Roles.company)], tokens.mul(7).div(2).div(50), 6 * 30 days);
-        lokedMint(wallets[uint8(Roles.company)], tokens.mul(7).div(2).div(50), 1 years);
+        queueMint(wallets[uint8(Roles.company)], tokens.mul(7).div(2).div(50), 6 * 30 days);
+        queueMint(wallets[uint8(Roles.company)], tokens.mul(7).div(2).div(50), 1 years);
 
         // 1% - tokens to Bounty wallet, freeze 2 month
-        lokedMint(wallets[uint8(Roles.bounty)], tokens.mul(1).div(50), 60 days);
+        queueMint(wallets[uint8(Roles.bounty)], tokens.mul(1).div(50), 60 days);
 
         // 15% - tokens to Founders wallet, freeze 50% 6 month, 50% 12 month
-        lokedMint(wallets[uint8(Roles.founders)], tokens.mul(15).div(2).div(50), 6 * 30 days);
-        lokedMint(wallets[uint8(Roles.founders)], tokens.mul(15).div(2).div(50), 1 years);
+        queueMint(wallets[uint8(Roles.founders)], tokens.mul(15).div(2).div(50), 6 * 30 days);
+        queueMint(wallets[uint8(Roles.founders)], tokens.mul(15).div(2).div(50), 1 years);
 
         // 12% - tokens to Fund wallet, freeze 50% 2 month, 50% 12 month
-        lokedMint(wallets[uint8(Roles.fund)], tokens.mul(12).div(2).div(50), 2 * 30 days);
-        lokedMint(wallets[uint8(Roles.fund)], tokens.mul(12).div(2).div(50), 1 years);
+        queueMint(wallets[uint8(Roles.fund)], tokens.mul(12).div(2).div(50), 2 * 30 days);
+        queueMint(wallets[uint8(Roles.fund)], tokens.mul(12).div(2).div(50), 1 years);
     }
 
     // The function for obtaining smart contract funds in ETH. If all the checks are true, the token is

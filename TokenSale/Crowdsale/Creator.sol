@@ -3,6 +3,7 @@ pragma solidity ^0.4.21;
 import './RefundVault.sol';
 import './AllocationToss.sol';
 import './PeriodicAllocation.sol';
+import './AllocationQueue.sol';
 import '../Token/Token.sol';
 
 contract Creator{
@@ -22,6 +23,12 @@ contract Creator{
 
     function createPeriodicAllocation(Token _token) external returns (PeriodicAllocation) {
         PeriodicAllocation allocation = new PeriodicAllocation(_token);
+        allocation.transferOwnership(msg.sender);
+        return allocation;
+    }
+
+    function createAllocationQueue(Token _token) external returns (AllocationQueue) {
+        AllocationQueue allocation = new AllocationQueue(_token);
         allocation.transferOwnership(msg.sender);
         return allocation;
     }
