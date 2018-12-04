@@ -748,8 +748,8 @@ contract Crowdsale{
         queueMint(wallets[uint8(Roles.company)], tokens.mul(4).div(50), 30 days);
 
         // 7% - tokens to Team wallet, freeze 50% 6 month, 50% 12 month
-        queueMint(wallets[uint8(Roles.company)], tokens.mul(7).div(2).div(50), 6 * 30 days);
-        queueMint(wallets[uint8(Roles.company)], tokens.mul(7).div(2).div(50), 1 years);
+        queueMint(wallets[uint8(Roles.team)], tokens.mul(7).div(2).div(50), 6 * 30 days);
+        queueMint(wallets[uint8(Roles.team)], tokens.mul(7).div(2).div(50), 1 years);
 
         // 1% - tokens to Bounty wallet, freeze 2 month
         queueMint(wallets[uint8(Roles.bounty)], tokens.mul(1).div(50), 60 days);
