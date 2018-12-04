@@ -33,11 +33,13 @@ contract AllocationQueue is Ownable {
         totalShare = totalShare.add(_tokens);
     }
 
-    function unlockFor(address _owner) public {
-        uint256 currentDate = groupDates(now);
-        uint256 share = queue[_owner][currentDate];
+    function unlockFor(address _owner, uint256 _date) public {
+        require(groupDates(_date) <= groupDates(now));
 
-        queue[_owner][currentDate] = 0;
+        uint256 date = groupDates(_date);
+        uint256 share = queue[_owner][date];
+
+        queue[_owner][date] = 0;
 
         if (share > 0) {
             token.transfer(_owner,share);
