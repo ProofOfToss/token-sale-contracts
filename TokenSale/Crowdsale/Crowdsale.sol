@@ -195,6 +195,11 @@ contract Crowdsale{
         token.setUnpausedWallet(wallets[uint8(Roles.observer)], true);
         token.setUnpausedWallet(wallets[uint8(Roles.players)], true);
         token.setUnpausedWallet(wallets[uint8(Roles.airdrop)], true);
+        token.setUnpausedWallet(wallets[uint8(Roles.fund)], true);
+        token.setUnpausedWallet(wallets[uint8(Roles.founders)], true);
+
+        token.setUnpausedWallet(allocation, true);
+        token.setUnpausedWallet(allocationQueue, true);
 
         bonuses.push(Bonus(71 ether, 30));
 
