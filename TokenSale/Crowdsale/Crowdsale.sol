@@ -111,8 +111,7 @@ contract Crowdsale{
 
 
     uint256 public startTime= 1524560400;
-    uint256 public endTime  = 1529830799;
-    uint256 public renewal;
+    uint256 public stopTime= 0;
 
     // How many tokens (excluding the bonus) are transferred to the investor in exchange for 1 ETH
     // **QUINTILLIONS** 10^18 for human, *10**18 for Solidity, 1e18 for MyEtherWallet (MEW).
@@ -249,7 +248,7 @@ contract Crowdsale{
     function validPurchase() internal view returns (bool) {
 
         // The round started and did not end
-        bool withinPeriod = (now > startTime && now < endTime.add(renewal));
+        bool withinPeriod = (now > startTime && stopTime == 0);
 
         // Rate is greater than or equal to the minimum
         bool nonZeroPurchase = msg.value >= minPay;
@@ -264,11 +263,9 @@ contract Crowdsale{
     // Check for the ability to finalize the round. Constant.
     function hasEnded() public view returns (bool) {
 
-        bool timeReached = now > endTime.add(renewal);
-
         bool capReached = weiRaised() >= hardCap;
 
-        return (timeReached || capReached) && isInitialized;
+        return (stopTime > 0 || capReached) && isInitialized;
     }
 
     // Finalize. Only available to the Manager and the Beneficiary. If the round failed, then
@@ -395,7 +392,6 @@ contract Crowdsale{
         emit Initialized();
 
         isInitialized = true;
-        renewal = 0;
         canFirstMint = false;
     }
 
@@ -403,6 +399,19 @@ contract Crowdsale{
         if (address(vault) != 0x0 && vault.state() != RefundVault.State.Active){
             vault.restart();
         }
+    }
+
+    // Manually stops the round. Available to the manager.
+    // @ Do I have to use the function      yes
+    // @ When it is possible to call        after each round
+    // @ When it is launched automatically  -
+    // @ Who can call the function          admins
+    function stop() {
+        onlyAdmin(false);
+
+        require(stopTime == 0 && now > startTime);
+
+        stopTime = now;
     }
 
     // At the request of the investor, we raise the funds (if the round has failed because of the hardcap)
@@ -426,7 +435,7 @@ contract Crowdsale{
     // @ When it is possible to call        before each round
     // @ When it is launched automatically  -
     // @ Who can call the function          admins
-    function setup(uint256 _startTime, uint256 _endTime, uint256 _softCap, uint256 _hardCap,
+    function setup(uint256 _startTime, uint256 _softCap, uint256 _hardCap,
     uint256 _rate, uint256 _exchange,
     uint256 _maxAllProfit, uint256 _overLimit, uint256 _minPay,
     uint256[] _durationTB , uint256[] _percentTB, uint256[] _valueVB, uint256[] _percentVB) public
@@ -439,9 +448,7 @@ contract Crowdsale{
 
         // Date and time are correct
         require(now <= _startTime);
-        require(_startTime < _endTime);
         startTime = _startTime;
-        endTime = _endTime;
 
         // The parameters are correct
         require(_softCap <= _hardCap);
@@ -523,7 +530,7 @@ contract Crowdsale{
     function tokenUnpause() external {
 
         require(wallets[uint8(Roles.manager)] == msg.sender
-        || (now > endTime.add(renewal).add(USER_UNPAUSE_TOKEN_TIMEOUT) && TokenSale == TokenSaleType.round2 && isFinalized && goalReached()));
+        || (now > stopTime.add(USER_UNPAUSE_TOKEN_TIMEOUT) && TokenSale == TokenSaleType.round2 && isFinalized && goalReached()));
         token.setPause(false);
     }
 
@@ -624,27 +631,13 @@ contract Crowdsale{
     // @ Who can call the function          admin
     function massBurnTokens(address[] _beneficiary, uint256[] _value) external {
         onlyAdmin(false);
-        require(endTime.add(renewal).add(BURN_TOKENS_TIME) > now);
+        require(stopTime.add(BURN_TOKENS_TIME) > now);
         require(_beneficiary.length == _value.length);
         for(uint16 i; i<_beneficiary.length; i++) {
             token.burn(_beneficiary[i],_value[i]);
         }
     }
 
-    // Extend the round time, if provided by the script. Extend the round only for
-    // a limited number of days - ROUND_PROLONGATE
-    // ***CHECK***SCENARIO***
-    // @ Do I have to use the function      no
-    // @ When it is possible to call        during active round
-    // @ When it is launched automatically  -
-    // @ Who can call the function          admins
-    function prolong(uint256 _duration) external {
-        onlyAdmin(false);
-        require(now > startTime && now < endTime.add(renewal) && isInitialized);//добавленно
-        renewal = renewal.add(_duration);
-        require(renewal <= ROUND_PROLONGATE);
-
-    }
     // If a little more than a year has elapsed (Round2 start date + 400 days), a smart contract
     // will allow you to send all the money to the Beneficiary, if any money is present. This is
     // possible if you mistakenly launch the Round2 for 30 years (not 30 days), investors will transfer
@@ -727,7 +720,7 @@ contract Crowdsale{
     function paymentsInOtherCurrency(uint256 _token, uint256 _value) public {
         //require(wallets[uint8(Roles.observer)] == msg.sender || wallets[uint8(Roles.manager)] == msg.sender);
         onlyAdmin(true);
-        bool withinPeriod = (now >= startTime && now <= endTime.add(renewal));
+        bool withinPeriod = (now >= startTime && stopTime == 0);
 
         bool withinCap = _value.add(ethWeiRaised) <= hardCap.add(overLimit);
         require(withinPeriod && withinCap && isInitialized);
