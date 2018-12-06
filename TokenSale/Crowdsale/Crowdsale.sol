@@ -124,11 +124,11 @@ contract Crowdsale{
     // If the round does not attain this value before the closing date, the round is recognized as a
     // failure and investors take the money back (the founders will not interfere in any way).
     // **QUINTILLIONS** 10^18 / *10**18 / 1e18. Example: softcap=15ETH ==> use 15*10**18 (Solidity) or 15e18 (MEW)
-    uint256 public softCap = 8500 ether;
+    uint256 public softCap = 3458 ether;
 
     // The maximum possible amount of income
     // **QUINTILLIONS** 10^18 / *10**18 / 1e18. Example: hardcap=123.45ETH ==> use 123450*10**15 (Solidity) or 12345e15 (MEW)
-    uint256 public hardCap = 71500 ether;
+    uint256 public hardCap = 13572 ether;
 
     // If the last payment is slightly higher than the hardcap, then the usual contracts do
     // not accept it, because it goes beyond the hardcap. However it is more reasonable to accept the
