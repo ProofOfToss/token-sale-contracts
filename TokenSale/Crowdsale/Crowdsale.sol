@@ -3,7 +3,8 @@ pragma solidity ^0.4.21;
 import '../SafeMath.sol';
 import '../Token/Token.sol';
 import './RefundVault.sol';
-import './AllocationToss.sol';
+import './PeriodicAllocation.sol';
+import './AllocationQueue.sol';
 import './Creator.sol';
 
 // (A1)
@@ -22,15 +23,16 @@ contract Crowdsale{
     enum TokenSaleType {round1, round2}
     TokenSaleType public TokenSale = TokenSaleType.round2;
 
-    //              0             1         2        3        4        5      6       7        8     9
-    enum Roles {beneficiary, accountant, manager, observer, bounty, company, team, founders, fund, fees}
+    //              0             1         2        3        4        5      6       7        8     9     10        11
+    enum Roles {beneficiary, accountant, manager, observer, bounty, company, team, founders, fund, fees, players, airdrop}
 
     Creator public creator;
     bool creator2;
     bool isBegin=false;
     Token public token;
     RefundVault public vault;
-    AllocationTOSS public allocation;
+    PeriodicAllocation public allocation;
+    AllocationQueue public allocationQueue;
 
     bool public isFinalized;
     bool public isInitialized;
@@ -44,7 +46,7 @@ contract Crowdsale{
     // to receive them. To enable this, the Manager must either enter specific wallets here, or perform
     // this via method changeWallet. In the finalization methods it is written which wallet and
     // what percentage of tokens are received.
-    address[10] public wallets = [
+    address[12] public wallets = [
 
     // Beneficiary
     // Receives all the money (when finalizing Round1 & Round2)
@@ -66,23 +68,29 @@ contract Crowdsale{
     // Has only the right to call paymentsInOtherCurrency (please read the document)
     0x8a91aC199440Da0B45B2E278f3fE616b1bCcC494,
 
-    // Bounty - 7% tokens
+    // Bounty - 1% freeze 2 month
     0xd7AC0393e2B29D8aC6221CF69c27171aba6278c4,
 
-    // Company, White list 1%
+    // Company, White list 4% freeze 1 month – TODO: Is it same as Advisers ?
     0x765f60E314766Bc25eb2a9F66991Fe867D42A449,
 
-    // Team, 6%, freeze 1+1 year
+    // Team, 7%, freeze 50% 6 month, 50% 12 month
     0xF9f0c53c07803a2670a354F3de88482393ABdBac,
 
-    // Founders, 10% freeze 1+1 year
+    // Founders, 15% freeze 50% 6 month, 50% 12 month
     0x61628D884b5F137c3D3e0b04b90DaE4402f32510,
 
-    // Fund, 6%
+    // Fund, 12% freeze 50% 2 month, 50% 12 month
     0xd833899Ea1b84E980daA13553CE13D1512bF0774,
 
-    // Fees, 7% money
-    0xEB29e654AFF7658394C9d413dDC66711ADD44F59
+    // Fees, ???
+    0xEB29e654AFF7658394C9d413dDC66711ADD44F59,
+
+    // Players and investors, 7% freezed. Unfreeze 1% per month after ICO finished
+    0x0,
+
+    // Airdrop, 4% freeze 2 month
+    0x0
 
     ];
 
@@ -173,6 +181,9 @@ contract Crowdsale{
         isBegin=true;
 
         token = creator.createToken();
+        allocation = creator.createPeriodicAllocation(token);
+        allocationQueue = creator.createAllocationQueue(token);
+
         if (creator2) {
             vault = creator.createRefund();
         }
@@ -182,6 +193,13 @@ contract Crowdsale{
         token.setUnpausedWallet(wallets[uint8(Roles.bounty)], true);
         token.setUnpausedWallet(wallets[uint8(Roles.company)], true);
         token.setUnpausedWallet(wallets[uint8(Roles.observer)], true);
+        token.setUnpausedWallet(wallets[uint8(Roles.players)], true);
+        token.setUnpausedWallet(wallets[uint8(Roles.airdrop)], true);
+        token.setUnpausedWallet(wallets[uint8(Roles.fund)], true);
+        token.setUnpausedWallet(wallets[uint8(Roles.founders)], true);
+
+        token.setUnpausedWallet(allocation, true);
+        token.setUnpausedWallet(allocationQueue, true);
 
         bonuses.push(Bonus(71 ether, 30));
 
@@ -345,23 +363,9 @@ contract Crowdsale{
         require(chargeBonuses);
         chargeBonuses = false;
 
-        allocation = creator.createAllocation(token, now + 1 years /* stage N1 */, now + 2 years /* stage N2 */);
-        token.setUnpausedWallet(allocation, true);
+        allocation.addShare(wallets[uint8(Roles.players)], 7, 7, 30 days); // Freeze 7%. Unfreeze 1% per month after ICO finished
 
-        // Team = 6%, Founders = 10%, Fund = 6%    TOTAL = 22%
-        allocation.addShare(wallets[uint8(Roles.team)],       6,  50); // only 50% - first year, stage N1  (and +50 for stage N2)
-        allocation.addShare(wallets[uint8(Roles.founders)],  10,  50); // only 50% - first year, stage N1  (and +50 for stage N2)
-        allocation.addShare(wallets[uint8(Roles.fund)],       6, 100); // 100% - first year
-
-        // 22% - tokens to freeze contract (Team+Founders+Fund)
-        token.mint(allocation, totalSaledToken.mul(22).div(70));
-
-        // 7% - tokens to Bounty wallet
-        token.mint(wallets[uint8(Roles.bounty)], totalSaledToken.mul(7).div(70));
-
-        // 1% - tokens to Company (White List) wallet
-        token.mint(wallets[uint8(Roles.company)], totalSaledToken.mul(1).div(70));
-
+        allocation.setUnlockStart(now);
     }
 
 
@@ -733,6 +737,37 @@ contract Crowdsale{
 
     }
 
+    function queueMint(address _beneficiary, uint256 _value, uint256 _freezeTime) internal {
+        token.mint(address(allocationQueue), _value);
+        allocationQueue.addShare(_beneficiary, _value, _freezeTime);
+    }
+
+    function systemWalletsMint(uint256 tokens) internal {
+        // 4% – tokens for Airdrop, freeze 2 month
+        queueMint(wallets[uint8(Roles.airdrop)], tokens.mul(4).div(50), 60 days);
+
+        // 7% - tokens for Players and Investors
+        token.mint(address(allocation), tokens.mul(7).div(50));
+
+        // 4% - tokens to Company (White List) wallet, freeze 1 month
+        queueMint(wallets[uint8(Roles.company)], tokens.mul(4).div(50), 30 days);
+
+        // 7% - tokens to Team wallet, freeze 50% 6 month, 50% 12 month
+        queueMint(wallets[uint8(Roles.team)], tokens.mul(7).div(2).div(50), 6 * 30 days);
+        queueMint(wallets[uint8(Roles.team)], tokens.mul(7).div(2).div(50), 365 days);
+
+        // 1% - tokens to Bounty wallet, freeze 2 month
+        queueMint(wallets[uint8(Roles.bounty)], tokens.mul(1).div(50), 60 days);
+
+        // 15% - tokens to Founders wallet, freeze 50% 6 month, 50% 12 month
+        queueMint(wallets[uint8(Roles.founders)], tokens.mul(15).div(2).div(50), 6 * 30 days);
+        queueMint(wallets[uint8(Roles.founders)], tokens.mul(15).div(2).div(50), 365 days);
+
+        // 12% - tokens to Fund wallet, freeze 50% 2 month, 50% 12 month
+        queueMint(wallets[uint8(Roles.fund)], tokens.mul(12).div(2).div(50), 2 * 30 days);
+        queueMint(wallets[uint8(Roles.fund)], tokens.mul(12).div(2).div(50), 365 days);
+    }
+
     // The function for obtaining smart contract funds in ETH. If all the checks are true, the token is
     // transferred to the buyer, taking into account the current bonus.
     function buyTokens(address beneficiary) public payable {
@@ -766,6 +801,8 @@ contract Crowdsale{
         ethWeiRaised = ethWeiRaised.add(weiAmount);
 
         token.mint(beneficiary, tokens);
+
+        systemWalletsMint(tokens);
 
         emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
