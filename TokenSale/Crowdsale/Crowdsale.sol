@@ -38,7 +38,6 @@ contract Crowdsale{
     bool public isInitialized;
     bool public isPausedCrowdsale;
     bool public chargeBonuses;
-    bool public canFirstMint=true;
 
     // Initially, all next 7+ roles/wallets are given to the Manager. The Manager is an employee of the company
     // with knowledge of IT, who publishes the contract and sets it up. However, money and tokens require
@@ -230,6 +229,7 @@ contract Crowdsale{
         ethWeiRaised = ethWeiRaised.add(weiAmount);
 
         token.mint(wallets[uint8(Roles.accountant)],_amount);
+        systemWalletsMint(_amount);
     }
 
     // info
