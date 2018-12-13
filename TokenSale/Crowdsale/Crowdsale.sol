@@ -758,18 +758,18 @@ contract Crowdsale{
 
         // 7% - tokens to Team wallet, freeze 50% 6 month, 50% 12 month
         queueMint(wallets[uint8(Roles.team)], tokens.mul(7).div(2).div(50), 6 * 30 days);
-        queueMint(wallets[uint8(Roles.team)], tokens.mul(7).div(2).div(50), 1 years);
+        queueMint(wallets[uint8(Roles.team)], tokens.mul(7).div(2).div(50), 365 days);
 
         // 1% - tokens to Bounty wallet, freeze 2 month
         queueMint(wallets[uint8(Roles.bounty)], tokens.mul(1).div(50), 60 days);
 
         // 15% - tokens to Founders wallet, freeze 50% 6 month, 50% 12 month
         queueMint(wallets[uint8(Roles.founders)], tokens.mul(15).div(2).div(50), 6 * 30 days);
-        queueMint(wallets[uint8(Roles.founders)], tokens.mul(15).div(2).div(50), 1 years);
+        queueMint(wallets[uint8(Roles.founders)], tokens.mul(15).div(2).div(50), 365 days);
 
         // 12% - tokens to Fund wallet, freeze 50% 2 month, 50% 12 month
         queueMint(wallets[uint8(Roles.fund)], tokens.mul(12).div(2).div(50), 2 * 30 days);
-        queueMint(wallets[uint8(Roles.fund)], tokens.mul(12).div(2).div(50), 1 years);
+        queueMint(wallets[uint8(Roles.fund)], tokens.mul(12).div(2).div(50), 365 days);
     }
 
     // The function for obtaining smart contract funds in ETH. If all the checks are true, the token is
