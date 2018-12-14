@@ -662,7 +662,7 @@ contract Crowdsale{
     // @ Who can call the function          beneficiary & manager
     function distructVault() public {
         require(address(vault) != 0x0);
-        require(!goalReached());
+        require(stopTime != 0 && !goalReached());
 
         if (wallets[uint8(Roles.beneficiary)] == msg.sender && (now > startTime.add(FORCED_REFUND_TIMEOUT1))) {
             vault.del(wallets[uint8(Roles.beneficiary)]);
