@@ -38,7 +38,6 @@ contract Crowdsale{
     bool public isInitialized;
     bool public isPausedCrowdsale;
     bool public chargeBonuses;
-    bool public canFirstMint=true;
 
     // Initially, all next 7+ roles/wallets are given to the Manager. The Manager is an employee of the company
     // with knowledge of IT, who publishes the contract and sets it up. However, money and tokens require
@@ -212,14 +211,25 @@ contract Crowdsale{
 
     // Issue of tokens for the zero round, it is usually called: private pre-sale (Round 0)
     // @ Do I have to use the function      may be
-    // @ When it is possible to call        before Round 1/2
+    // @ When it is possible to call        before Round 1/2 and untill crowdsale end
     // @ When it is launched automatically  -
     // @ Who can call the function          admins
-    function firstMintRound0(uint256 _amount) public {
+    function privateMint(uint256 _amount) public {
         onlyAdmin(false);
-        require(canFirstMint);
+        require(stopTime == 0);
+
+        uint256 weiAmount = _amount.mul(1 ether).div(rate);
+        bool withinCap = weiAmount <= hardCap.sub(weiRaised()).add(overLimit);
+
+        require(withinCap);
+
         begin();
+
+        // update state
+        ethWeiRaised = ethWeiRaised.add(weiAmount);
+
         token.mint(wallets[uint8(Roles.accountant)],_amount);
+        systemWalletsMint(_amount);
     }
 
     // info
@@ -392,7 +402,6 @@ contract Crowdsale{
         emit Initialized();
 
         isInitialized = true;
-        canFirstMint = false;
     }
 
     function initialization() internal {
