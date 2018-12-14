@@ -23,8 +23,8 @@ contract Crowdsale{
     enum TokenSaleType {round1, round2}
     TokenSaleType public TokenSale = TokenSaleType.round2;
 
-    //              0             1         2        3        4        5      6       7        8     9     10        11
-    enum Roles {beneficiary, accountant, manager, observer, bounty, company, team, founders, fund, fees, players, airdrop}
+    //              0             1         2        3        4        5       6       7        8     9     10        11       12
+    enum Roles {beneficiary, accountant, manager, observer, bounty, advisers, team, founders, fund, fees, players, airdrop, referrals}
 
     Creator public creator;
     bool creator2;
@@ -45,7 +45,7 @@ contract Crowdsale{
     // to receive them. To enable this, the Manager must either enter specific wallets here, or perform
     // this via method changeWallet. In the finalization methods it is written which wallet and
     // what percentage of tokens are received.
-    address[12] public wallets = [
+    address[13] public wallets = [
 
     // Beneficiary
     // Receives all the money (when finalizing Round1 & Round2)
@@ -70,25 +70,28 @@ contract Crowdsale{
     // Bounty - 1% freeze 2 month
     0xd7AC0393e2B29D8aC6221CF69c27171aba6278c4,
 
-    // Company, White list 4% freeze 1 month – TODO: Is it same as Advisers ?
+    // Advisers 4% freeze 1 month
     0x765f60E314766Bc25eb2a9F66991Fe867D42A449,
 
     // Team, 7%, freeze 50% 6 month, 50% 12 month
     0xF9f0c53c07803a2670a354F3de88482393ABdBac,
 
-    // Founders, 15% freeze 50% 6 month, 50% 12 month
+    // Founders, 11% freeze 50% 6 month, 50% 12 month
     0x61628D884b5F137c3D3e0b04b90DaE4402f32510,
 
     // Fund, 12% freeze 50% 2 month, 50% 12 month
     0xd833899Ea1b84E980daA13553CE13D1512bF0774,
 
-    // Fees, ???
+    // Fees, 7% money
     0xEB29e654AFF7658394C9d413dDC66711ADD44F59,
 
     // Players and investors, 7% freezed. Unfreeze 1% per month after ICO finished
     0x0,
 
     // Airdrop, 4% freeze 2 month
+    0x0,
+
+    // Referrals, 4% no freeze
     0x0
 
     ];
@@ -124,11 +127,11 @@ contract Crowdsale{
     // If the round does not attain this value before the closing date, the round is recognized as a
     // failure and investors take the money back (the founders will not interfere in any way).
     // **QUINTILLIONS** 10^18 / *10**18 / 1e18. Example: softcap=15ETH ==> use 15*10**18 (Solidity) or 15e18 (MEW)
-    uint256 public softCap = 8500 ether;
+    uint256 public softCap = 3458 ether;
 
     // The maximum possible amount of income
     // **QUINTILLIONS** 10^18 / *10**18 / 1e18. Example: hardcap=123.45ETH ==> use 123450*10**15 (Solidity) or 12345e15 (MEW)
-    uint256 public hardCap = 71500 ether;
+    uint256 public hardCap = 13572 ether;
 
     // If the last payment is slightly higher than the hardcap, then the usual contracts do
     // not accept it, because it goes beyond the hardcap. However it is more reasonable to accept the
@@ -189,12 +192,13 @@ contract Crowdsale{
         token.setUnpausedWallet(wallets[uint8(Roles.accountant)], true);
         token.setUnpausedWallet(wallets[uint8(Roles.manager)], true);
         token.setUnpausedWallet(wallets[uint8(Roles.bounty)], true);
-        token.setUnpausedWallet(wallets[uint8(Roles.company)], true);
+        token.setUnpausedWallet(wallets[uint8(Roles.advisers)], true);
         token.setUnpausedWallet(wallets[uint8(Roles.observer)], true);
         token.setUnpausedWallet(wallets[uint8(Roles.players)], true);
         token.setUnpausedWallet(wallets[uint8(Roles.airdrop)], true);
         token.setUnpausedWallet(wallets[uint8(Roles.fund)], true);
         token.setUnpausedWallet(wallets[uint8(Roles.founders)], true);
+        token.setUnpausedWallet(wallets[uint8(Roles.referrals)], true);
 
         token.setUnpausedWallet(allocation, true);
         token.setUnpausedWallet(allocationQueue, true);
@@ -753,8 +757,8 @@ contract Crowdsale{
         // 7% - tokens for Players and Investors
         token.mint(address(allocation), tokens.mul(7).div(50));
 
-        // 4% - tokens to Company (White List) wallet, freeze 1 month
-        queueMint(wallets[uint8(Roles.company)], tokens.mul(4).div(50), 30 days);
+        // 4% - tokens to Advisers wallet, freeze 1 month
+        queueMint(wallets[uint8(Roles.advisers)], tokens.mul(4).div(50), 30 days);
 
         // 7% - tokens to Team wallet, freeze 50% 6 month, 50% 12 month
         queueMint(wallets[uint8(Roles.team)], tokens.mul(7).div(2).div(50), 6 * 30 days);
@@ -763,13 +767,16 @@ contract Crowdsale{
         // 1% - tokens to Bounty wallet, freeze 2 month
         queueMint(wallets[uint8(Roles.bounty)], tokens.mul(1).div(50), 60 days);
 
-        // 15% - tokens to Founders wallet, freeze 50% 6 month, 50% 12 month
-        queueMint(wallets[uint8(Roles.founders)], tokens.mul(15).div(2).div(50), 6 * 30 days);
-        queueMint(wallets[uint8(Roles.founders)], tokens.mul(15).div(2).div(50), 365 days);
+        // 11% - tokens to Founders wallet, freeze 50% 6 month, 50% 12 month
+        queueMint(wallets[uint8(Roles.founders)], tokens.mul(11).div(2).div(50), 6 * 30 days);
+        queueMint(wallets[uint8(Roles.founders)], tokens.mul(11).div(2).div(50), 365 days);
 
         // 12% - tokens to Fund wallet, freeze 50% 2 month, 50% 12 month
         queueMint(wallets[uint8(Roles.fund)], tokens.mul(12).div(2).div(50), 2 * 30 days);
         queueMint(wallets[uint8(Roles.fund)], tokens.mul(12).div(2).div(50), 365 days);
+
+        // 4% - tokens for Referrals
+        token.mint(wallets[uint8(Roles.referrals)], tokens.mul(4).div(50));
     }
 
     // The function for obtaining smart contract funds in ETH. If all the checks are true, the token is
