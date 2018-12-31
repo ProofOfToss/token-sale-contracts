@@ -307,6 +307,10 @@ contract Crowdsale{
     // @ Who can call the function          -
     function finalization() internal {
 
+        if (stopTime == 0) {
+            stopTime = now;
+        }
+
         //uint256 feesValue;
         // If the goal of the achievement
         if (goalReached()) {
@@ -543,7 +547,7 @@ contract Crowdsale{
     function tokenUnpause() external {
 
         require(wallets[uint8(Roles.manager)] == msg.sender
-        || (now > stopTime.add(USER_UNPAUSE_TOKEN_TIMEOUT) && TokenSale == TokenSaleType.round2 && isFinalized && goalReached()));
+        || (stopTime != 0 && now > stopTime.add(USER_UNPAUSE_TOKEN_TIMEOUT) && TokenSale == TokenSaleType.round2 && isFinalized && goalReached()));
         token.setPause(false);
     }
 
@@ -644,7 +648,7 @@ contract Crowdsale{
     // @ Who can call the function          admin
     function massBurnTokens(address[] _beneficiary, uint256[] _value) external {
         onlyAdmin(false);
-        require(stopTime.add(BURN_TOKENS_TIME) > now);
+        require(stopTime == 0 || stopTime.add(BURN_TOKENS_TIME) > now);
         require(_beneficiary.length == _value.length);
         for(uint16 i; i<_beneficiary.length; i++) {
             token.burn(_beneficiary[i],_value[i]);
