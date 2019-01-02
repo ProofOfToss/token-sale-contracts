@@ -13,7 +13,8 @@ The repository contains all necessary smart-contracts for Proof of Toss token sa
 * [Crowdsale contracts](TokenSale/Crowdsale):
     * Crowdsale: the crowdsale contract itself
     * RefundVault: the vault to refund the funds transferred to Crowdsale contract in case of failed token sale
-    * AllocationToss: the contract to keep locked tokens reserved for Proof of Toss team
+    * PeriodicAllocation: the contract to keep locked tokens reserved for players and investors
+    * AllocationQueue: the contract to keep locked tokens reserved for Proof of Toss team, founders, advisers and other special wallets (fund, bounty, airdrop)
 * [Token contract](TokenSale/Token):
     * ERC20Basic: basic version of ERC20 token interface (OpenZeppelin)
     * ERC20: full ERC20 token interface (OpenZeppelin)
@@ -44,6 +45,11 @@ Some of the contracts are taken from OpenZeppelin project with following modific
 * Perform third-party code audit
 
 ## How to deploy
+
+contracts_for_deploy.soljs is built using sol-merger (https://github.com/RyuuGan/sol-merger)
+
+* npm i -g sol-merger
+* sol-merger "./TokenSale/Crowdsale/Crowdsale.sol" ./ && mv Crowdsale.sol contracts_for_deploy.soljs
 
 Any possible options to compile and deploy contracts will work. You could use any of available ways to do it:
 
