@@ -59,7 +59,6 @@ contract AllocationQueue is Ownable {
 
         // Month
         uint8 month;
-        uint secondsInMonth;
 
         uint seconds31 = 31 * DAY_IN_SECONDS;
         uint seconds30 = 30 * DAY_IN_SECONDS;

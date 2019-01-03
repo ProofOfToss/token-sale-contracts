@@ -423,7 +423,7 @@ contract Crowdsale{
     // @ When it is possible to call        after each round
     // @ When it is launched automatically  -
     // @ Who can call the function          admins
-    function stop() {
+    function stop() public {
         onlyAdmin(false);
 
         require(stopTime == 0 && now > startTime);
