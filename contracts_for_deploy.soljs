@@ -939,7 +939,7 @@ contract Crowdsale{
 
     // Beneficiary
     // Receives all the money (when finalizing Round1 & Round2)
-    0xAa951F7c52055B89d3F281c73d557275070cBBfb,
+    0x4e82764a0be4E0859e87cD47eF348e8D892C2567,
 
     // Accountant
     // Receives all the tokens for non-ETH investors (when finalizing Round1 & Round2)
@@ -955,7 +955,7 @@ contract Crowdsale{
 
     // Observer
     // Has only the right to call paymentsInOtherCurrency (please read the document)
-    0x8a91aC199440Da0B45B2E278f3fE616b1bCcC494,
+    0x27609c2e3d9810FdFCe157F2c1d87b717d0b0C10,
 
     // Bounty - 1% freeze 2 month
     0xd7AC0393e2B29D8aC6221CF69c27171aba6278c4,
@@ -967,22 +967,22 @@ contract Crowdsale{
     0xF9f0c53c07803a2670a354F3de88482393ABdBac,
 
     // Founders, 11% freeze 50% 6 month, 50% 12 month
-    0x61628D884b5F137c3D3e0b04b90DaE4402f32510,
+    0x4816b3bA11477e42A81FffA8a4e376e4D1a7f007,
 
     // Fund, 12% freeze 50% 2 month, 50% 12 month
-    0xd833899Ea1b84E980daA13553CE13D1512bF0774,
+    0xe3C02072f8145DabCd7E7fe769ba1E3e73688ECc,
 
     // Fees, 7% money
     0xEB29e654AFF7658394C9d413dDC66711ADD44F59,
 
     // Players and investors, 7% freezed. Unfreeze 1% per month after ICO finished
-    0x0,
+    0x6faEc0c1ff412Fd041aB30081Cae677B362bd3c1,
 
     // Airdrop, 4% freeze 2 month
-    0x0,
+    0x7AA186f397dB8aE1FB80897e4669c1Ea126BA788,
 
     // Referrals, 4% no freeze
-    0x0
+    0xAC26988d1573FC6626069578E6A5a4264F76f0C5
 
     ];
 
@@ -1002,26 +1002,26 @@ contract Crowdsale{
     Profit[] public profits;
 
 
-    uint256 public startTime= 1524560400;
+    uint256 public startTime= 1547197200;
     uint256 public stopTime= 0;
 
     // How many tokens (excluding the bonus) are transferred to the investor in exchange for 1 ETH
     // **QUINTILLIONS** 10^18 for human, *10**18 for Solidity, 1e18 for MyEtherWallet (MEW).
     // Example: if 1ETH = 40.5 Token ==> use 40500 finney
-    uint256 public rate = 10000 ether;
+    uint256 public rate = 25000 ether;
 
     // ETH/USD rate in US$
     // **QUINTILLIONS** 10^18 / *10**18 / 1e18. Example: ETH/USD=$1000 ==> use 1000*10**18 (Solidity) or 1000 ether or 1000e18 (MEW)
-    uint256 public exchange  = 700 ether; // not in use
+    uint256 public exchange  = 150 ether; // not in use
 
     // If the round does not attain this value before the closing date, the round is recognized as a
     // failure and investors take the money back (the founders will not interfere in any way).
     // **QUINTILLIONS** 10^18 / *10**18 / 1e18. Example: softcap=15ETH ==> use 15*10**18 (Solidity) or 15e18 (MEW)
-    uint256 public softCap = 3458 ether;
+    uint256 public softCap = 16133 ether;
 
     // The maximum possible amount of income
     // **QUINTILLIONS** 10^18 / *10**18 / 1e18. Example: hardcap=123.45ETH ==> use 123450*10**15 (Solidity) or 12345e15 (MEW)
-    uint256 public hardCap = 13572 ether;
+    uint256 public hardCap = 63333 ether;
 
     // If the last payment is slightly higher than the hardcap, then the usual contracts do
     // not accept it, because it goes beyond the hardcap. However it is more reasonable to accept the
@@ -1095,7 +1095,7 @@ contract Crowdsale{
 
         bonuses.push(Bonus(71 ether, 30));
 
-        profits.push(Profit(15,1 days));
+        profits.push(Profit(15,2 days));
         profits.push(Profit(10,2 days));
         profits.push(Profit(5,4 days));
 
@@ -1618,7 +1618,7 @@ contract Crowdsale{
     // This scenario ensures that for the sum of all fees in all currencies this value does not exceed hardcap.
 
     // Addresses for other currencies:
-    // BTC Address: 3HiqVz6wFhSHZ3QUbX9C8GUPSjdDuksPJA
+    // BTC Address: 3NKfzN4kShB7zpWTe2vzFDY4NuYa1SqdEV
 
     // ** QUINTILLIONS ** 10^18 / 1**18 / 1e18
 
